@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/jfimb/anaconda3/python.exe\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-files.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/jfimb/anaconda3/python.exe\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/quality-gate.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/jfimb/anaconda3/python.exe\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/verify-reminder.py\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/jfimb/anaconda3/python.exe\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/context-monitor.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/jfimb/anaconda3/python.exe\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/log-reminder.py\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/jfimb/anaconda3/python.exe\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-compact.py\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/jfimb/anaconda3/python.exe\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-compact-restore.py\""
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/jfimb/anaconda3/python.exe\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/notify.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

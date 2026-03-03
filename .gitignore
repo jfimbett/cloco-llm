@@ -1,0 +1,42 @@
+# Secrets and local configuration
+.env
+.env.local
+.claude/settings.local.json
+.claude/state/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.out
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+*.bcf
+*.run.xml
+*.xdv
+paper/**/*.pdf
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+*.swp
+*.swo
+*~
