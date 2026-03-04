@@ -47,10 +47,12 @@ Keep under 150 lines, since Claude loads it every session.
 ├── replication/                # Replication package materials
 ├── code/                       # All the code for the project.
 ├── templates/                  # Session log, quality report templates
-├── quality_reports/            # Quality gate reports, scores, and session logs
+├── quality_reports/            # Paper quality artifacts only: scores, session logs, merge reports, research journal
 ├── master_supporting_docs/     # Reference papers and data docs if needed
 └── .claude/
-    └── lessons/                # Lessons learned: mistakes, corrections, prevention rules
+    ├── lessons/                # Lessons learned: mistakes, corrections, prevention rules
+    ├── plans/                  # Agent plan files (internal, gitignored by convention)
+    └── specs/                  # Requirements spec files (internal, gitignored by convention)
 ```
 
 ---
@@ -113,6 +115,7 @@ See `scoring-protocol.md` for weighted aggregation formula.
 | `/learn` | Extract session discoveries into skills |
 | `/context-status` | Session health + context usage |
 | `/deploy` | Quarto render + GitHub Pages sync |
+| `/pipeline-status [type]` | Pipeline dashboard + guide (type: empirical\|theory\|structural\|empirical+theory) |
 
 ---
 

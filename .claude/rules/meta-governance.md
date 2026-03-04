@@ -103,7 +103,7 @@ When creating or modifying content, ask:
 
 ### Plan-First Workflow
 ✅ Do: Enter plan mode for non-trivial tasks (>3 files, >1 hour, multi-step)
-✅ Do: Save plans to `quality_reports/plans/YYYY-MM-DD_description.md`
+✅ Do: Save plans to `.claude/plans/YYYY-MM-DD_description.md`
 ❌ Don't: Skip planning for "quick fixes" that turn into multi-hour tasks
 
 ### Spec-Then-Plan
@@ -228,7 +228,7 @@ As this repository evolves, meta-governance may need updates.
 | Agents (generic) | ✅ Yes | .claude/agents/ | ✅ Yes |
 | Hooks (generic behavior) | ✅ Yes | .claude/hooks/ | ✅ Yes |
 | Session logs | ✅ Yes | quality_reports/session_logs/ | ✅ Yes |
-| Plans | ✅ Yes | quality_reports/plans/ | ✅ Yes |
+| Plans | ❌ No | .claude/plans/ | ❌ No (gitignored) |
 | Local settings | ❌ No | .claude/settings.local.json | ❌ No (gitignored) |
 | Session state | ❌ No | .claude/state/ | ❌ No (gitignored) |
 | Build artifacts | ❌ No | .aux, .log, .synctex.gz | ❌ No (gitignored) |

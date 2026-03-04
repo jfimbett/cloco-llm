@@ -3,6 +3,8 @@
 .env.local
 .claude/settings.local.json
 .claude/state/
+.claude/plans/
+.claude/specs/
 
 # LaTeX build artifacts
 *.aux
