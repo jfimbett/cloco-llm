@@ -330,33 +330,7 @@ for some $\hat{\boldsymbol{\alpha}} = (\hat{\alpha}_1, \ldots, \hat{\alpha}_n)^\
 \end{proposition}
 
 \begin{proof}
-Decompose any $f \in \mathcal{H}$ as $f = f_{\parallel} + f_{\perp}$,
-where $f_{\parallel}$ lies in the finite-dimensional subspace
-$\mathcal{V} = \operatorname{span}\{k(\mathbf{X}_s, \cdot) : s = 1, \ldots, n\}$
-and $f_{\perp} \in \mathcal{V}^{\perp}$.
-By the reproducing property,
-\[
-f(\mathbf{X}_s)
-= \langle f, k(\mathbf{X}_s, \cdot) \rangle_{\mathcal{H}}
-= \langle f_{\parallel}, k(\mathbf{X}_s, \cdot) \rangle_{\mathcal{H}}
-  + \langle f_{\perp}, k(\mathbf{X}_s, \cdot) \rangle_{\mathcal{H}}
-= f_{\parallel}(\mathbf{X}_s),
-\]
-since $k(\mathbf{X}_s, \cdot) \in \mathcal{V}$ and
-$f_{\perp} \perp \mathcal{V}$.
-Therefore the prediction loss
-$\frac{1}{n}\sum_s (R_s - f(\mathbf{X}_s))^2$
-depends only on $f_{\parallel}$, and so does every $C_j(f)$
-by assumption~\eqref{eq:penalty_eval}.
-
-For the RKHS norm, orthogonality gives
-$\|f\|_{\mathcal{H}}^2 = \|f_{\parallel}\|_{\mathcal{H}}^2 +
-\|f_{\perp}\|_{\mathcal{H}}^2$.
-Since $\|f_{\perp}\|_{\mathcal{H}}^2 \geq 0$ and
-$\lambda_{\mathrm{stat}} > 0$, the objective is strictly decreased
-by setting $f_{\perp} = 0$ whenever $f_{\perp} \neq 0$.
-Hence any minimizer satisfies $f = f_{\parallel} \in \mathcal{V}$,
-which yields the representation~\eqref{eq:representer}.
+\emph{The proof is given in Appendix~\ref{app:proofs}.}
 \end{proof}
 
 \begin{remark}[Verification for Types~A--D]
@@ -415,21 +389,7 @@ in terms of fitted values.
 \end{proposition}
 
 \begin{proof}
-The prediction loss becomes
-$\frac{1}{n}\|\mathbf{R} - \mathbf{K}\boldsymbol{\alpha}\|^2$
-since $f(\mathbf{X}_s) = \sum_{s'} \alpha_{s'} k(\mathbf{X}_{s'}, \mathbf{X}_s)
-= [\mathbf{K}\boldsymbol{\alpha}]_s$.
-For the RKHS norm,
-\[
-\|f\|_{\mathcal{H}}^2
-= \left\langle \sum_s \alpha_s\, k(\mathbf{X}_s, \cdot),\;
-         \sum_{s'} \alpha_{s'}\, k(\mathbf{X}_{s'}, \cdot) \right\rangle_{\mathcal{H}}
-= \sum_{s,s'} \alpha_s\, \alpha_{s'}\, k(\mathbf{X}_s, \mathbf{X}_{s'})
-= \boldsymbol{\alpha}^\top \mathbf{K}\, \boldsymbol{\alpha}.
-\]
-By condition~\eqref{eq:penalty_eval}, each $C_j(f)$ is a function of
-$\hat{\mathbf{f}} = \mathbf{K}\boldsymbol{\alpha}$.
-Combining yields~\eqref{eq:finite_dim}.
+\emph{The proof is given in Appendix~\ref{app:proofs}.}
 \end{proof}
 
 %----------------------------------------------------------------------
@@ -535,51 +495,7 @@ and when $\mathbf{K}$ is strictly positive definite, the unique solution is
 \end{proposition}
 
 \begin{proof}
-Write the objective~\eqref{eq:finite_dim} with quadratic penalties as
-\begin{multline}
-\label{eq:obj_expanded}
-L(\boldsymbol{\alpha})
-= \frac{1}{n}(\mathbf{R} - \mathbf{K}\boldsymbol{\alpha})^\top
-  (\mathbf{R} - \mathbf{K}\boldsymbol{\alpha})
-+ \lambda_{\mathrm{stat}}\,\boldsymbol{\alpha}^\top\mathbf{K}\boldsymbol{\alpha} \\
-+ \sum_{j \in \mathcal{J}^A} \mu_j
-  (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)^\top
-  (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)
-+ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}
-  (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j)^\top
-  (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j),
-\end{multline}
-where $\mathbf{v}_j = \mathbf{g}_j$ for Type~B and $\mathbf{v}_j = \mathbf{h}_j$ for Type~C.
-Taking the gradient with respect to $\boldsymbol{\alpha}$:
-\begin{align}
-\frac{\partial L}{\partial \boldsymbol{\alpha}}
-&= -\frac{2}{n}\,\mathbf{K}(\mathbf{R} - \mathbf{K}\boldsymbol{\alpha})
-+ 2\lambda_{\mathrm{stat}}\,\mathbf{K}\boldsymbol{\alpha}
-+ 2\sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{K}\mathbf{A}_j^\top
-  (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)
-\notag \\
-&\quad + 2\sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{K}
-  (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j).
-\label{eq:gradient}
-\end{align}
-Setting~\eqref{eq:gradient} to zero and left-multiplying by $\mathbf{K}^{-1}$
-(which exists when $\mathbf{K} \succ 0$):
-\[
-\frac{1}{n}\,\mathbf{K}\boldsymbol{\alpha}
-+ \lambda_{\mathrm{stat}}\,\boldsymbol{\alpha}
-+ \sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{A}_j^\top\mathbf{A}_j
-  \mathbf{K}\boldsymbol{\alpha}
-+ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{K}\boldsymbol{\alpha}
-= \frac{1}{n}\,\mathbf{R}
-+ \sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{A}_j^\top\mathbf{b}_j
-+ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{v}_j.
-\]
-Collecting terms using the definitions of $\boldsymbol{\Omega}$
-and $\boldsymbol{\omega}$ from~\eqref{eq:Omega}--\eqref{eq:omega_vec}
-gives~\eqref{eq:foc}.
-Strict positive definiteness of $\mathbf{K}$ and $\lambda_{\mathrm{stat}} > 0$
-ensure the coefficient matrix in~\eqref{eq:foc} is invertible, yielding
-uniqueness.
+\emph{The proof is given in Appendix~\ref{app:proofs}.}
 \end{proof}
 
 \begin{remark}[Computational cost]
@@ -684,28 +600,7 @@ The theory-informed KRR estimator~\eqref{eq:tikrr} nests the following:
 \end{proposition}
 
 \begin{proof}
-Claims~(i) and~(ii) follow directly from the definition.
-For~(i), setting $\mu_j = 0$ eliminates the structural penalties.
-For~(ii), taking $\mu_j \to \infty$ enforces $C_j(f) = 0$ as a constraint;
-formally, the sequence of penalized minimizers converges to the
-constrained minimizer provided $C_j$ is lower semicontinuous and
-$\{f \in \mathcal{H} : C_j(f) = 0\}$ is nonempty.
-Setting $\lambda_{\mathrm{stat}} = 0$ removes agnostic regularization.
-
-For~(iii), the linear kernel restricts $\mathcal{H}$ to linear functions
-$f(\mathbf{x}) = \boldsymbol{\beta}^\top \mathbf{x}$, with
-$\|f\|_{\mathcal{H}}^2 = \|\boldsymbol{\beta}\|^2$.
-Substituting a Type~C penalty with target-PCA factor loadings and
-simplifying gives~\eqref{eq:ipca_nest}.
-
-For~(iv), the correspondence is notational:
-the $\ell_1$ norm replaces the $\ell_2$ RKHS norm,
-and the structural penalty becomes a weighted $\ell_1$ term on coefficients
-rather than a penalty on function evaluations.
-The estimator~\eqref{eq:llm_lasso_nest} coincides with the adaptive
-Lasso when $\gamma_{j,k} = |\hat{\beta}_k^{\mathrm{init}}|^{-1}$
-and with text-informed penalization when $\gamma_{j,k}$ reflects
-LLM-derived variable relevance scores.
+\emph{The proof is given in Appendix~\ref{app:proofs}.}
 \end{proof}
 
 \begin{remark}[Weak dominance]
@@ -819,49 +714,7 @@ $\hat{\mu}_j \xrightarrow{p} 0$ as $n \to \infty$.
 \end{proposition}
 
 \begin{proof}
-We show that any $\mu_j > 0$ introduces an asymptotic bias, so the
-oracle sets $\mu_j^* = 0$.
-
-\emph{Step 1: Asymptotic bias from misspecification.}
-When $C_j(f^*) > 0$, the set
-$\mathcal{F}_j(\mu_j) = \arg\min_{f \in \mathcal{H}}
-\frac{1}{n}\sum_s (R_s - f(\mathbf{X}_s))^2
-+ \lambda_{\mathrm{stat}}\|f\|_{\mathcal{H}}^2 + \mu_j C_j(f)$
-converges (as $n \to \infty$ and $\lambda_{\mathrm{stat}} \to 0$ at an
-appropriate rate) to the population minimizer
-\[
-f_j^*(\mu_j) = \arg\min_{f} \mathbb{E}[(R - f(\mathbf{X}))^2] + \mu_j C_j(f).
-\]
-By~\ref{cond:consistency}, $f_j^*(0) = f^*$.
-For $\mu_j > 0$, the term $\mu_j C_j(f)$ tilts the solution toward
-$\{f : C_j(f) \text{ is small}\}$.
-Since $C_j(f^*) > 0$, this tilt is binding: $f_j^*(\mu_j) \neq f^*$
-for all $\mu_j > 0$, and the prediction risk satisfies
-\[
-\mathbb{E}\bigl[(R - f_j^*(\mu_j)(\mathbf{X}))^2\bigr]
-> \mathbb{E}\bigl[(R - f^*(\mathbf{X}))^2\bigr]
-= \mathbb{E}[\varepsilon^2]
-\qquad \text{for all } \mu_j > 0.
-\]
-
-\emph{Step 2: Risk gap is bounded away from zero.}
-By continuity of $C_j$ (condition~\ref{cond:bounded}) and strict
-convexity of the population prediction risk,
-for any $\delta > 0$ there exists $c(\delta) > 0$ such that
-\[
-\mathrm{Risk}(\mu_j) - \mathrm{Risk}(0)
-\;\geq\; c(\delta) > 0
-\qquad \text{for all } \mu_j \geq \delta,
-\]
-where $\mathrm{Risk}(\mu_j) = \mathbb{E}[(R - f_j^*(\mu_j)(\mathbf{X}))^2]$.
-
-\emph{Step 3: Oracle efficiency implies $\hat{\mu}_j \to 0$.}
-By~\ref{cond:cv_oracle}, $\mathrm{CV}(\hat{\boldsymbol{\lambda}})$
-tracks the oracle $\inf_{\boldsymbol{\lambda}} \mathrm{CV}(\boldsymbol{\lambda})$
-up to $o_p(1)$.  Since the oracle selects $\mu_j^* = 0$
-(the unique risk minimizer along the $\mu_j$ coordinate by Step~2),
-and the risk gap is bounded below by $c(\delta)$ for $\mu_j \geq \delta$,
-we have $\Pr(\hat{\mu}_j \geq \delta) \to 0$ for every $\delta > 0$.
+\emph{The proof is given in Appendix~\ref{app:proofs}.}
 \end{proof}
 
 \begin{remark}[Practical implication]
@@ -950,30 +803,7 @@ Under $H_1\!: \mu_j^* > 0$, $T_j \to \infty$ in probability.
 \end{proposition}
 
 \begin{proof}
-\emph{Under $H_0$.}
-When $\mu_j^* = 0$, the oracle solution does not use model $j$.
-Constraining $\mu_j = 0$ therefore imposes no binding restriction on the
-population objective.
-The difference
-$\mathrm{CV}(\hat{\boldsymbol{\lambda}}_{-j}) -
-\mathrm{CV}(\hat{\boldsymbol{\lambda}})$
-arises solely from finite-sample noise in the cross-validated selection
-of the remaining hyperparameters.
-By condition~\ref{cond:test_rate} and the oracle efficiency
-in~\ref{cond:cv_oracle}, this difference is
-$O_p(n^{-1} r_n)$, so $T_j = n \cdot O_p(n^{-1} r_n) = O_p(r_n) = o_p(1)$.
-
-\emph{Under $H_1$.}
-When $\mu_j^* > 0$, constraining $\mu_j = 0$ removes a binding
-restriction.
-By condition~\ref{cond:test_smooth},
-the population risk increases by at least
-$c > 0$ (a positive constant depending on $\mu_j^*$ and $C_j$).
-By uniform convergence of the cross-validated risk to the population risk,
-$\mathrm{CV}(\hat{\boldsymbol{\lambda}}_{-j}) -
-\mathrm{CV}(\hat{\boldsymbol{\lambda}}) \geq c/2 > 0$
-with probability approaching one.
-Hence $T_j = n(c/2 + o_p(1)) \to \infty$.
+\emph{The proof is given in Appendix~\ref{app:proofs}.}
 \end{proof}
 
 \begin{remark}[Permutation inference]

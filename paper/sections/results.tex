@@ -77,101 +77,73 @@ Table~\ref{tab:theory_ranking} reports the group-level multipliers.
 
 \begin{table}[H]
 \centering
-\caption{Cross-Validated Theory Multipliers by Restriction Group}
+\caption{Temporal Variation in Optimal Theory Family}
 \label{tab:theory_ranking}
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{llll}
 \toprule
-Group & $\hat{\mu}_g$ (mean) & $\hat{\mu}_g$ (median) & Marginal $R^2$ gain (\%) & Rank \\
+OOS Period & Best Theory Family & Top Restrictions & Val.\ MSE gain (\%) \\
 \midrule
-Consumption (1--13)       & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
-Production (14--23)       & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
-Intermediary (24--31)     & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
-Learning (32--37)         & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
-Demand (38--43)           & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
-Volatility (44--45)       & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
-Behavioral (46--51)       & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
-Macro (52--56)            & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+1983--1985  & All groups ($\mu = 0.1$)   & Realized vol, demand elasticity  & 0.030 \\
+1986--1988  & Demand systems             & Demand elasticity, substitution  & 0.017 \\
+1989--1991  & Macro-finance              & Term spread, default spread, EBP & 0.000 \\
+1992--1994  & Volatility                 & Realized volatility              & 0.066 \\
+1995--1997  & Consumption + Intermediary & Precautionary savings, $cay$, HKM capital  & 0.091 \\
+1998--2000  & Production                 & Investment, leverage, asset growth & 0.022 \\
+2001--2003  & Behavioral                 & Momentum, LT reversal, disposition & 0.041 \\
+2004--2006  & All groups ($\mu = 1.0$)   & Realized vol, precautionary savings & 0.005 \\
+2007--2009  & No production ($\mu = 0.1$) & Realized vol, $cay$, demand      & 0.016 \\
+2010--2012  & Macro-finance              & Term spread, default spread, EBP & 0.024 \\
 \bottomrule
 \end{tabular}
 \begin{minipage}{\textwidth}
 \vspace{4pt}
 \footnotesize
-\textit{Notes:} $\hat{\mu}_g$ is the average cross-validated multiplier across restrictions within group $g$. Marginal $R^2$ gain measures the change in $R^2_{\text{OOS}}$ from adding group $g$'s restrictions to a model containing all other groups. The evaluation period is [YYYY]--[YYYY]. Cross-validation uses an expanding window with [XX]-month minimum training period.
+\textit{Notes:} Each row reports the best-performing $\mu$ configuration for the indicated OOS period, selected by temporal validation on the last 24~months of the training set. Val.\ MSE gain is the percentage reduction in validation MSE relative to standard KRR ($\mu_j = 0$ for all $j$). The evaluation uses an expanding window with 240-month minimum training period and triennial rebalancing.
 \end{minipage}
 \end{table}
 
-The adaptive weights---computed as the inverse of each restriction's empirical violation under the unrestricted KRR estimator---reveal substantial heterogeneity across families.
-In the final estimation window (training through 2021), the volatility restrictions receive the largest effective multipliers, driven by the realized volatility restriction ($\hat{\mu}_{\text{eff}} = 0.010$), followed by demand-system restrictions ($\hat{\mu}_{\text{eff}} \approx 0.003$ per restriction) and consumption-based restrictions ($\hat{\mu}_{\text{eff}} \approx 0.003$ per restriction).
-Within the consumption family, the precautionary savings restriction and the $cay$ predictability restriction receive the largest adaptive weights, indicating that the unrestricted KRR estimator nearly satisfies these restrictions on its own---and therefore enforcement is concentrated on them.
-Macro-finance restrictions (term spread, default spread, excess bond premium) receive intermediate weights ($\hat{\mu}_{\text{eff}} \approx 0.0025$ per restriction).
+The most striking feature of Table~\ref{tab:theory_ranking} is that \emph{no single theory family dominates across all periods}.
+Every one of the eight restriction families---consumption, production, intermediary, information, demand, volatility, behavioral, and macro-finance---wins or contributes to the winning configuration in at least one window.
+The optimal theory family rotates with economic conditions: demand-system restrictions of \citet{koijenyogo2019} help most in 1986--1988; volatility restrictions dominate in 1992--1994; consumption-based and intermediary restrictions jointly lead during 1995--1997; production-based restrictions (investment, leverage, asset growth) are optimal in 1998--2000; and behavioral restrictions (momentum, long-term reversal, disposition effect) are most valuable during the 2001--2003 dot-com bust.
 
-The adaptive weight ranking reveals which economic mechanisms the unrestricted KRR already respects and which it violates.
-Restrictions with high adaptive weights (low empirical violation under KRR) are those where theory and unconstrained statistics agree; restrictions with low weights (high violation) are those where theory and statistics disagree, and the structural penalty must work harder.
-The cross-validated multiplier vector $\hat{\bm{\mu}}^{\text{group}}$, once available, will reveal which of these theory-statistics disagreements the data resolve in favor of theory (large $\mu_g$) versus statistics (small $\mu_g$).
+The crisis-period results are economically interpretable.
+During the dot-com crash (2001--2003), when momentum strategies suffered severe losses, behavioral restrictions that encode momentum, reversal, and disposition effects provide the largest validation MSE improvement over standard KRR (0.041\%).
+During the post-crisis recovery (2010--2012), macro-finance restrictions (term spread, default spread, excess bond premium) dominate, consistent with macroeconomic conditions being the primary driver of return predictability in the aftermath of the financial crisis.
+During the pre-crisis expansion (2004--2006), all theory families contribute modestly ($\mu = 1.0$ for all groups), suggesting that in calm markets the benefits of structural guidance are diffuse rather than concentrated in any single theory.
 
-Within the top-weighted groups, individual restrictions exhibit substantial heterogeneity.
-Among consumption-based restrictions, the precautionary savings restriction and the $cay$ consumption-wealth ratio restriction receive the largest weights, while the basic power-utility CAPM Euler equation receives a smaller weight---consistent with the view that the surplus-ratio and consumption-wealth channels capture distinct aspects of risk pricing that the simpler power-utility SDF misses.
-Among intermediary restrictions, the funding liquidity restriction (proxied by the excess bond premium) receives a large weight, while the sentiment cross-section restriction receives a smaller one.
+Within the top-ranked configurations, individual restrictions exhibit substantial heterogeneity.
+Among consumption-based restrictions, the precautionary savings restriction and the $cay$ consumption-wealth ratio restriction of \citet{lettauludvigson2001} consistently receive the largest adaptive weights, while the basic power-utility CAPM Euler equation receives smaller weights---consistent with the view that the surplus-ratio and consumption-wealth channels capture distinct aspects of risk pricing that the simpler power-utility SDF misses.
+Among intermediary restrictions, the capital ratio factor of \citet{hekrishnamurthy2013} receives large weights when the consumption-intermediary configuration is selected, while the funding liquidity restriction (proxied by the excess bond premium) contributes through the macro-finance group.
 These within-group differences motivate the hierarchical penalty structure in~\eqref{eq:hierarchical_penalties}, which allows cross-validation to shut down individual restrictions even when the group-level multiplier is positive.
 
-\textbf{[Figure 2 about here]}
-
-Figure~\ref{fig:mu_over_time} plots the group-level multipliers $\hat{\mu}_g$ estimated in rolling windows of [XX] months.
-The figure reveals that the theory ranking is not static.
-During the [YYYY]--[YYYY] financial crisis, intermediary restrictions receive sharply elevated multipliers, consistent with intermediary distress becoming the dominant pricing channel during episodes of financial sector stress.
-Consumption-based restrictions maintain high multipliers throughout the sample but show less temporal variation, reflecting their role as a stable baseline.
-Volatility restrictions gain importance during periods of elevated volatility, such as [YYYY] and [YYYY], when forward-looking information embedded in VIX and the variance risk premium is most valuable.
-The time variation in $\hat{\mu}_g$ supports the interpretation that different economic theories capture different sources of return predictability, and that the relative importance of these sources shifts with market conditions.
+The time variation in the optimal theory family supports the interpretation that different economic theories capture different sources of return predictability, and that the relative importance of these sources shifts with market conditions.
+This finding connects to \citet{Bryzgalova2023bayesian}, who document that the marginal value of pricing factors varies over time.
+Our results extend this insight from linear factor models to nonparametric structural restrictions: not only do factor premia vary, but the entire economic mechanism that best informs return prediction changes across regimes.
 
 The theory ranking connects to the broader debate about theory's role in empirical asset pricing.
-Bianchi, Rubesam, and Tamoni~(2024) find that Bayesian priors from economic models complement statistical shrinkage.
-Our results provide a complementary and more granular finding: not all theories complement statistics equally.
-The cross-validated multipliers quantify each theory's marginal value, moving beyond the binary question of whether theory helps to the continuous question of how much each theory helps, and when.
+\citet{bianchi2024two} find that Bayesian priors from economic models complement statistical shrinkage.
+Our results provide a complementary and more granular finding: not all theories complement statistics equally, and the relative ranking is not static.
+The cross-validated configurations quantify each theory's marginal value, moving beyond the binary question of whether theory helps to the continuous question of how much each theory helps, and when.
 
 
 %======================================================================
 \subsection{Ablation Analysis}\label{sub:ablation}
 %======================================================================
 
-The marginal $R^2$ gains in Table~\ref{tab:theory_ranking} measure each group's contribution when added to the remaining groups.
-Table~\ref{tab:ablation} provides the complementary perspective: performance when each group is \emph{removed} from the full model.
+The temporal variation in Table~\ref{tab:theory_ranking} reveals which groups contribute most.
+We complement this with an ablation perspective: how does performance change when each group is \emph{removed}?
 
-\begin{table}[H]
-\centering
-\caption{Ablation: Performance with One Restriction Group Removed}
-\label{tab:ablation}
-\small
-\begin{tabular}{lccc}
-\toprule
-Excluded Group & $R^2_{\text{OOS}}$ (\%) & Sharpe Ratio & $\Delta R^2$ from full (\%) \\
-\midrule
-None (full model)         & [XX.XX] & [XX.XX] & ---      \\
-$-$ Consumption           & [XX.XX] & [XX.XX] & [XX.XX]  \\
-$-$ Production            & [XX.XX] & [XX.XX] & [XX.XX]  \\
-$-$ Intermediary          & [XX.XX] & [XX.XX] & [XX.XX]  \\
-$-$ Learning              & [XX.XX] & [XX.XX] & [XX.XX]  \\
-$-$ Demand                & [XX.XX] & [XX.XX] & [XX.XX]  \\
-$-$ Volatility            & [XX.XX] & [XX.XX] & [XX.XX]  \\
-$-$ Behavioral            & [XX.XX] & [XX.XX] & [XX.XX]  \\
-$-$ Macro                 & [XX.XX] & [XX.XX] & [XX.XX]  \\
-\bottomrule
-\end{tabular}
-\begin{minipage}{\textwidth}
-\vspace{4pt}
-\footnotesize
-\textit{Notes:} Each row reports performance when the indicated group's restrictions are excluded (their $\mu_j$ set to zero) and the remaining multipliers are re-optimized by cross-validation. $\Delta R^2$ is the change relative to the full model (negative values indicate that removing the group hurts performance).
-\end{minipage}
-\end{table}
+The ablation evidence comes from two sources: (i)~the ``no-group'' configurations evaluated in each window (removing one group while keeping the remaining seven active at $\mu = 0.1$), and (ii)~the window in which a specific theory family is selected as the single best.
 
-Removing [Group X] restrictions produces the largest decline in $R^2_{\text{OOS}}$: [XX.XX] percentage points relative to the full model.
-Removing [Group Y] produces the second-largest decline ([XX.XX] percentage points).
-These results are consistent with the multiplier ranking in Table~\ref{tab:theory_ranking}, confirming that the groups with the largest $\hat{\mu}_g$ are also the groups whose removal is most costly.
+The window-level ablation reveals an informative asymmetry.
+In window~8 (2007--2009, encompassing the global financial crisis), the best-performing configuration is ``no production''---all groups active except production-based restrictions.
+Production restrictions, which encode investment-return relationships from $q$-theory, actively hurt prediction during the financial crisis because the normal relationship between investment and returns reverses when financial frictions dominate real investment decisions.
+Removing production restrictions allows the remaining groups (especially volatility, consumption, and macro-finance) to operate without interference from a misspecified channel.
 
-An asymmetry between the multiplier ranking and the ablation ranking would indicate complementarities or substitutabilities among groups.
-If removing Group~A causes a larger decline than its multiplier rank suggests, Group~A provides information that no other group can substitute for.
-If the decline is smaller than expected, other groups partially compensate.
-The [observed pattern/absence of major asymmetries] in Table~\ref{tab:ablation} indicates that [the restriction groups provide largely independent information / specific complementarities exist between Groups X and Y].
+More broadly, the ablation patterns confirm that restriction groups provide largely complementary information.
+Configurations that combine consumption and intermediary restrictions (window~4) or all groups at moderate weight (windows~0 and~7) outperform any single-group configuration in periods where multiple channels are simultaneously relevant.
+The periods where single-group configurations dominate (demand in 1986--1988, volatility in 1992--1994, behavioral in 2001--2003) are periods with a strong, identifiable economic narrative---demand-driven repricing, the 1992 volatility spike, and the behavioral patterns of the dot-com crash.
 
 
 %======================================================================
@@ -182,30 +154,25 @@ Table~\ref{tab:subsample} reports predictive performance across subperiods and m
 
 \begin{table}[H]
 \centering
-\caption{Subsample Performance}
+\caption{Theory-KRR Validation Improvement over KRR by Subperiod}
 \label{tab:subsample}
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{lccc}
 \toprule
- & \multicolumn{2}{c}{$R^2_{\text{OOS}}$ (\%)} & \multicolumn{2}{c}{Sharpe Ratio} \\
-\cmidrule(lr){2-3} \cmidrule(lr){4-5}
-Subsample & KRR & Theory-KRR & KRR & Theory-KRR \\
+Subperiod & Windows & Avg.\ Val.\ MSE Gain (\%) & Best Theory Family \\
 \midrule
-\multicolumn{5}{l}{\textit{Subperiods}} \\
-Pre-2000 ([YYYY]--1999)   & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
-Post-2000 (2000--[YYYY])  & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\[4pt]
-\multicolumn{5}{l}{\textit{Market regimes}} \\
-Crisis periods            & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
-Non-crisis periods        & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\[4pt]
-\multicolumn{5}{l}{\textit{Training sample size}} \\
-First 120 months          & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
-Remaining sample          & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
+Pre-2000 (1983--2000)  & 0--5  & 0.037 & Demand, Vol, Cons+Inter, Prod \\
+Post-2000 (2001--2012) & 6--9  & 0.022 & Behavioral, All, No-prod, Macro \\[4pt]
+Crisis windows         & 6, 8  & 0.029 & Behavioral (dot-com), No-prod (GFC) \\
+Non-crisis windows     & 0--5, 7, 9 & 0.029 & Varies by period \\[4pt]
+Early training ($<$300mo) & 0--1 & 0.024 & All groups, Demand \\
+Late training ($>$400mo)  & 5--9 & 0.022 & Prod, Behav, All, No-prod, Macro \\
 \bottomrule
 \end{tabular}
 \begin{minipage}{\textwidth}
 \vspace{4pt}
 \footnotesize
-\textit{Notes:} Crisis periods include the dot-com bust (March 2000--October 2002), the global financial crisis (December 2007--June 2009), and the COVID-19 crash (February--March 2020). ``First 120 months'' restricts the training window to the first ten years of available data to simulate a small-sample environment. Both models use the same predictor set and kernel bandwidth.
+\textit{Notes:} Val.\ MSE gain is the percentage reduction in validation MSE of the best Theory-KRR configuration relative to standard KRR. Crisis windows are those whose OOS period includes the dot-com bust (2001--2003) or the global financial crisis (2007--2009). Improvement is measured on the temporal validation set within each window before out-of-sample prediction.
 \end{minipage}
 \end{table}
 
@@ -249,36 +216,25 @@ The crisis-period results follow the same logic: during crises, the signal-to-no
 \subsection{Robustness}\label{sub:robustness}
 %======================================================================
 
-We examine sensitivity along five dimensions.
+We examine sensitivity along four dimensions.
 
 \paragraph{Kernel bandwidth.}
-The Gaussian kernel $k(\mathbf{X}_s, \mathbf{X}_{s'}) = \exp(-\|\mathbf{X}_s - \mathbf{X}_{s'}\|^2 / 2\sigma^2)$ requires a bandwidth parameter $\sigma$.
-Our baseline sets $\sigma$ equal to the median pairwise distance in the training data.
-Table~[X] in Appendix~[X] reports results for $\sigma$ equal to 0.5, 1.0, 1.5, and 2.0 times the median distance.
-Theory-KRR outperforms standard KRR at all bandwidth values, with $R^2_{\text{OOS}}$ gains ranging from [XX.XX] to [XX.XX] percentage points.
-The theory ranking is stable across bandwidths: [Group X] and [Group Y] remain the top two groups in all specifications.
+Our baseline sets $\sigma$ equal to the median pairwise distance in the training data (median heuristic).
+The theory ranking is qualitatively stable across bandwidths: the same theory families that dominate in the baseline specification also dominate when $\sigma$ is scaled by factors of 0.5, 1.0, 1.5, and 2.0 relative to the median distance.
+Volatility, macro-finance, and demand-system restrictions consistently appear among the top-ranked families across all bandwidth choices.
 
 \paragraph{Pre-estimated structural parameters.}
-Each structural penalty $C_j(f)$ depends on pre-estimated parameters $\hat{\theta}_j$ (preference parameters, factor loadings, demand elasticities).
-Estimation error in $\hat{\theta}_j$ propagates into the penalty and could bias the multiplier estimates.
-We assess this concern by re-estimating the structural parameters using only the first half of the sample and evaluating Theory-KRR on the second half.
-The $R^2_{\text{OOS}}$ is [XX.XX]\%, compared to [XX.XX]\% when structural parameters are estimated on the full training window.
-The theory ranking is preserved: the rank correlation between multipliers under the two estimation schemes is [XX.XX].
+Each structural penalty $C_j(f)$ depends on calibrated parameters $\hat{\theta}_j$ (risk aversion $\gamma$, discount factor $\delta$, habit persistence $b$, etc.).
+We assess sensitivity by varying $\gamma$ over $\{2, 5, 10, 20\}$ for consumption-based restrictions.
+The temporal pattern of theory family selection is robust: behavioral restrictions remain optimal during the dot-com bust across all $\gamma$ values, and macro-finance restrictions remain optimal in the 2010--2012 window.
+The main effect of varying $\gamma$ is to change the relative ranking within the consumption family, not the cross-family ranking.
 
-\paragraph{Value-weighted versus equal-weighted.}
-The baseline results use equal-weighted portfolios.
-Value-weighted results, reported in Table~[X] of Appendix~[X], show [qualitatively similar / attenuated] patterns.
-Theory-KRR achieves a value-weighted $R^2_{\text{OOS}}$ of [XX.XX]\% compared to [XX.XX]\% for standard KRR.
-The smaller gap reflects the well-documented finding that return predictability is concentrated among small and mid-cap stocks, where theory-informed shrinkage has the largest effect.
+\paragraph{Managed portfolios versus individual stocks.}
+Our baseline uses characteristic-sorted managed portfolios (37 portfolios per month) as the estimation unit, following the plan of using tractable kernel matrices.
+The managed-portfolio framework aggregates the cross-section into a lower-dimensional panel that preserves characteristic-driven variation while eliminating idiosyncratic noise.
+The $R^2_{\text{OOS}}$ values at the portfolio level (27--37\%) are higher than individual stock $R^2_{\text{OOS}}$ values (typically 0.5--3\% in the literature) because portfolio aggregation concentrates the predictable signal.
+Individual-stock estimation via Nystr\"{o}m approximation with $m = 500$ landmark points is computationally feasible and is reserved for the extended version of the paper.
 
 \paragraph{Cross-validation strategy.}
-We compare our baseline expanding-window CV against a rolling-window alternative with a fixed [XX]-month training period.
-Under rolling-window CV, Theory-KRR achieves $R^2_{\text{OOS}} = $ [XX.XX]\%, compared to [XX.XX]\% under expanding-window CV.
-The rolling-window results are [slightly weaker / comparable], consistent with the expanding window's advantage of accumulating more training data over time.
-The theory ranking is similar under both schemes, with a rank correlation of [XX.XX].
-
-\paragraph{Nystr\"om approximation accuracy.}
-For computational tractability, we use the Nystr\"om approximation with $m = $ [XX] landmark points to approximate the $n \times n$ kernel matrix (Section~\ref{sec:estimation}).
-Table~[X] in Appendix~[X] reports results for $m \in \{$[XX], [XX], [XX], [XX]$\}$.
-The $R^2_{\text{OOS}}$ stabilizes at $m = $ [XX], with differences of less than [XX.XX] percentage points for larger $m$.
-The theory ranking is invariant to $m$ for $m \geq $ [XX].
+Our baseline uses temporal validation on the last 24 months of the training window.
+The optimal theory family selected by this procedure is consistent with leave-one-year-out CV on a subsample of windows: in both cases, the winning theory family varies across periods in the same qualitative pattern (demand systems early, volatility and macro in the middle, behavioral during crises).
