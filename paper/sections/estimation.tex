@@ -150,9 +150,10 @@ These are at most rank $T$ (since $\mathbf{A}_j$ has $T$ rows), and we exploit t
 
 \paragraph{Nonquadratic penalties (Type D).}
 When demand-system penalties with nonlinear demand functions are active, the objective is nonconvex.
-We minimize using L-BFGS with automatic differentiation, implemented in JAX.
-The Cholesky-based solution from the quadratic subproblem provides a warm start.
-Convergence to a local minimum requires 50--100 L-BFGS iterations, each costing $O(n^2)$ for the gradient computation.
+We minimize using L-BFGS-B with analytically computed gradients.
+The standard KRR solution (all $\mu_j = 0$) provides a warm start that places the optimizer in the basin of attraction of the theory-informed minimum.
+In practice, we use L-BFGS-B for all penalty types, as the analytical Hessians required by the augmented linear system approach are computationally expensive for the full restriction set.
+Convergence requires 50--200 L-BFGS iterations, each costing $O(n^2)$ for the gradient computation via analytically derived penalty gradients.
 
 \paragraph{Memory and scalability.}
 The kernel matrix $\mathbf{K}$ is $n \times n$ and must be stored in memory.
@@ -167,8 +168,9 @@ Both approximations introduce a controllable approximation error that decreases 
 We use $m = 500$ Nystr\"{o}m landmarks when the full kernel matrix is infeasible.
 
 \paragraph{Software.}
-The estimator is implemented in Python using JAX for automatic differentiation and GPU-accelerated linear algebra.
-Kernel matrix construction uses \texttt{sklearn.metrics.\allowbreak{}pairwise}.
+The estimator is implemented in Python using NumPy and SciPy for linear algebra.
+Kernel matrices are constructed via \texttt{scipy.spatial.distance}, the Cholesky factorization uses \texttt{scipy.linalg.cho\_factor}, and L-BFGS-B optimization uses \texttt{scipy.optimize.minimize}.
+Baseline models (OLS, Ridge, Lasso, Elastic Net, Random Forest) use scikit-learn; the neural network baseline uses PyTorch.
 The full codebase, including cross-validation, rolling-window evaluation, and portfolio construction, is available in the replication package.
 
 %======================================================================

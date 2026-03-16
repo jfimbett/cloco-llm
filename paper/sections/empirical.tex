@@ -12,19 +12,18 @@
 %======================================================================
 
 \paragraph{Returns.}
-We obtain monthly stock returns from the Center for Research in Security Prices (CRSP) monthly stock file covering 1925--2024, encompassing 38,843 unique securities and 5.16~million security-month observations.
+We obtain monthly stock returns from the Center for Research in Security Prices (CRSP) monthly stock file.
 The sample includes ordinary common shares (share codes 10 and 11) listed on NYSE, AMEX, and NASDAQ (exchange codes 1, 2, and 3).
-We exclude financial firms (SIC codes 6000--6999) and utilities (SIC codes 4900--4999), whose regulated balance sheets make standard asset-pricing models poor descriptions of their return-generating processes.
-We further exclude stocks with share prices below \$5 to mitigate microstructure noise from bid-ask bounce and illiquidity.
 Excess returns are computed by subtracting the one-month Treasury bill rate from the Fama-French data library.
-The effective sample period begins in July~1963---when both CRSP and Compustat coverage become reliable---and ends in December~2023, spanning 726~months.
+The effective sample period begins in July~1963---when both CRSP and Compustat coverage become reliable---and ends in December~2023, spanning 726~months and approximately 18,000 unique securities.
 This start date matches \citet{gu2020empirical} and the bulk of the cross-sectional return prediction literature.
 
 \paragraph{Firm characteristics.}
-We use 209 firm-level predictive characteristics from the Open Source Asset Pricing (OSAP) dataset of \citet{jensen2023machine}, supplemented with three CRSP-derived signals (price, size, and short-term reversal) computed directly from the CRSP monthly file.
+We use 220 firm-level predictive characteristics constructed from CRSP returns, Compustat fundamentals, and the Open Source Asset Pricing (OSAP) dataset of \citet{jensen2023machine}.
 The OSAP dataset provides a standardized, publicly available panel of signed characteristics at the security-month level, constructed following the original papers' methodologies and validated against published results.
+Supplementary variables include CRSP-derived signals (price, size, short-term reversal) and Compustat-derived fundamentals (investment-to-capital, ROE, leverage, ROA, gross profitability, asset growth, R\&D intensity) that enter the structural restriction penalties directly.
 All characteristics are signed so that higher values predict higher expected returns.
-This characteristic set subsumes and extends the 94~characteristics used in \citet{gu2020empirical} and includes size, book-to-market, momentum (2--12 months), short-term reversal, long-term reversal, investment-to-assets, gross profitability, accruals, CAPM beta, idiosyncratic volatility, Amihud illiquidity, earnings surprises, share turnover, and over 190~additional predictors spanning accounting ratios, trading activity, and analyst expectations.
+This characteristic set subsumes and extends the 94~characteristics used in \citet{gu2020empirical}.
 
 We merge the OSAP characteristics with CRSP returns using the permanent security identifier (permno).
 To ensure comparability across variables measured in different units, we cross-sectionally rank each characteristic to the unit interval $[0,1]$ each month.
@@ -55,7 +54,7 @@ Additional macro predictors---the dividend-price ratio, earnings-price ratio, ag
 We require a minimum of 15 non-missing characteristics per stock-month observation.
 Observations with fewer non-missing characteristics are dropped.
 Returns are winsorized at the 0.1st and 99.9th percentiles each month to limit the influence of extreme observations while preserving the bulk of the return distribution.
-After applying all filters, the sample contains approximately 2.1~million stock-month observations covering an average of 2,800~stocks per month.
+After applying all filters, the sample contains 1,778,850 stock-month observations spanning 18,000 unique securities, covering an average of approximately 2,450~stocks per month.
 
 Not all macro state variables are available for the full sample period.
 The VIX is available only from 1990, so the two variance and volatility restrictions (44--45) are evaluated on the post-1990 subsample.

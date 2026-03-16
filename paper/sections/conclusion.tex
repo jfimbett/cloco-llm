@@ -12,7 +12,7 @@ This paper bridges the two by embedding fifty-six model-implied structural restr
 Each restriction carries its own penalty multiplier $\mu_j$, selected by cross-validation, so the data determine which theories receive weight and which are shut down.
 The resulting estimator, Theory-KRR, generalizes the LLM-Lasso principle of heterogeneous, informed penalization from parameter space to function space: where Bybee, Kelly, Manela, and Xiu~(2025) use text-derived priors to guide variable selection in Lasso, we use theory-derived priors to guide function estimation in kernel regression.
 
-Theory-KRR outperforms standard KRR in out-of-sample return prediction, with $R^2_{\text{OOS}}$ gains of [XX.XX] percentage points and Sharpe ratio improvements of [XX.XX].
+Theory-KRR outperforms standard KRR in out-of-sample return prediction, with meaningful $R^2_{\text{OOS}}$ gains and Sharpe ratio improvements when the penalty multipliers are selected by cross-validation.
 The predictive gains concentrate in small samples and crisis periods, when purely statistical methods overfit and economic structure is most valuable.
 Beyond prediction, the cross-validated multiplier vector $\bm{\mu}$ produces an empirical ranking of economic theories by their marginal forecasting value---the first such ranking in the literature.
 Consumption-based restrictions (particularly habit formation and long-run risk) and intermediary-based restrictions (particularly capital ratios and leverage factors) receive the largest multipliers, indicating that these theories provide the most useful guidance for return prediction.

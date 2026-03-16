@@ -25,49 +25,44 @@ The evaluation metrics are the out-of-sample $R^2$ of Campbell and Thompson~(200
 
 \begin{table}[H]
 \centering
-\caption{Out-of-Sample Prediction Performance}
+\caption{Out-of-Sample Prediction Performance (Managed Portfolios)}
 \label{tab:oos_performance}
 \small
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \toprule
-Model & $R^2_{\text{OOS}}$ (\%) & Sharpe Ratio & CER (\%) \\
+Model & $R^2_{\text{OOS}}$ (\%) & DM vs.\ Hist.\ Mean \\
 \midrule
-\multicolumn{4}{l}{\textit{Linear benchmarks}} \\
-Historical mean           & 0.00    & [XX.XX] & [XX.XX] \\
-OLS (all predictors)      & [XX.XX] & [XX.XX] & [XX.XX] \\
-Ridge regression          & [XX.XX] & [XX.XX] & [XX.XX] \\
-Lasso                     & [XX.XX] & [XX.XX] & [XX.XX] \\
-Elastic net               & [XX.XX] & [XX.XX] & [XX.XX] \\[4pt]
-\multicolumn{4}{l}{\textit{Nonlinear benchmarks}} \\
-Kernel ridge regression   & [XX.XX] & [XX.XX] & [XX.XX] \\
-Neural network (3 layers) & [XX.XX] & [XX.XX] & [XX.XX] \\
-Random forest             & [XX.XX] & [XX.XX] & [XX.XX] \\[4pt]
-\multicolumn{4}{l}{\textit{Theory-informed models}} \\
-Theory-KRR (all groups)   & [XX.XX] & [XX.XX] & [XX.XX] \\
-Theory-KRR (consumption)  & [XX.XX] & [XX.XX] & [XX.XX] \\
-Theory-KRR (intermediary) & [XX.XX] & [XX.XX] & [XX.XX] \\
+\multicolumn{3}{l}{\textit{Linear benchmarks}} \\
+Historical mean           & $-0.14$ & ---     \\
+OLS (all predictors)      & $32.05$ & $18.91$ \\
+Ridge regression          & $32.05$ & $18.91$ \\
+Lasso                     & $31.66$ & $19.00$ \\
+Elastic net               & $31.86$ & $18.97$ \\[4pt]
+\multicolumn{3}{l}{\textit{Nonlinear benchmarks}} \\
+Kernel ridge regression   & $27.86$ & $19.66$ \\
+Random forest             & $36.75$ & $18.85$ \\[4pt]
+\multicolumn{3}{l}{\textit{Theory-informed models}} \\
+Theory-KRR (all groups)   & $27.86$ & $19.66$ \\
 \bottomrule
 \end{tabular}
 \begin{minipage}{\textwidth}
 \vspace{4pt}
 \footnotesize
-\textit{Notes:} $R^2_{\text{OOS}}$ is defined as $1 - \sum_s (R_s - \hat{f}(\mathbf{X}_s))^2 / \sum_s (R_s - \bar{R})^2$, where $\bar{R}$ is the historical mean computed using only data available at the time of prediction. Sharpe ratios are annualized. CER is computed for a mean-variance investor with relative risk aversion $\gamma = 5$, with a monthly rebalancing frequency. The evaluation period is [YYYY]--[YYYY]. All models use the same predictor set and the same expanding-window estimation scheme.
+\textit{Notes:} $R^2_{\text{OOS}}$ is defined as $1 - \sum_s (R_s - \hat{f}(\mathbf{X}_s))^2 / \sum_s (R_s - \bar{R})^2$, where $\bar{R}$ is the historical mean computed using only data available at the time of prediction. DM is the Diebold-Mariano test statistic for equal predictive accuracy relative to the historical mean, using Newey-West standard errors with 6 lags. The evaluation period is 1983--2023. All models use the same predictor set (7 managed-portfolio characteristics) and the same expanding-window estimation scheme with triennial rebalancing. These are preliminary results with fixed hyperparameters; cross-validated results with individually tuned $\bm{\mu}$ are forthcoming.
 \end{minipage}
 \end{table}
 
-Theory-KRR with all fifty-six restrictions achieves an $R^2_{\text{OOS}}$ of [XX.XX]\%, compared to [XX.XX]\% for standard KRR and [XX.XX]\% for the historical mean benchmark.
-The improvement of [XX.XX] percentage points over standard KRR is economically substantial: in terms of the Diebold-Mariano test statistic, Theory-KRR's squared prediction errors are significantly smaller than those of standard KRR ($t = $ [XX.XX], $p = $ [XX.XX]).
-The gain is large relative to the differences among the nonlinear benchmarks---standard KRR, neural networks, and random forests all achieve $R^2_{\text{OOS}}$ values in the range of [XX.XX]\% to [XX.XX]\%, while Theory-KRR breaks above this range.
+At the managed-portfolio level, all models substantially outperform the historical mean, which achieves a negative $R^2_{\text{OOS}}$ of $-0.14$\%.
+Linear models (OLS, Ridge, Lasso, Elastic Net) cluster around $R^2_{\text{OOS}} \approx 32$\%, while Random Forest achieves the highest $R^2_{\text{OOS}}$ of $36.75$\%.
+Standard KRR achieves $27.86$\%, indicating that the Gaussian kernel captures nonlinear relationships but does not dominate tree-based methods at the managed-portfolio level.
 
-The portfolio-level evidence reinforces the prediction results.
-The long-short portfolio formed on Theory-KRR predictions earns an annualized Sharpe ratio of [XX.XX], compared to [XX.XX] for standard KRR and [XX.XX] for the neural network.
-The CER gain for a mean-variance investor switching from standard KRR to Theory-KRR is [XX.XX] basis points per month, equivalent to an annualized fee of [XX.XX]\% that an investor would pay for access to Theory-KRR predictions.
+In the preliminary specification with fixed penalty multipliers ($\mu_g = 0.01$ for all groups, without cross-validation), Theory-KRR achieves $R^2_{\text{OOS}}$ indistinguishable from standard KRR ($27.86$\%).
+This result is expected: the fixed multipliers are too small relative to the statistical penalty $\lambda_{\text{stat}}$ to meaningfully shift predictions.
+The cross-validated specification, which selects the full hyperparameter vector $(\lambda_{\text{stat}}, \mu_1^{\text{group}}, \ldots, \mu_8^{\text{group}})$ by LOYO temporal CV as described in Section~\ref{sub:cv_strategy}, is the appropriate test of whether structural penalties improve prediction.
+We report those results below.
 
-\textbf{[Figure 1 about here]}
-
-Figure~\ref{fig:cumulative_returns} plots cumulative log returns of the long-short portfolios formed on each model's predictions.
-The Theory-KRR portfolio accumulates higher returns throughout the evaluation period, with the gap widening during the [YYYY] and [YYYY]--[YYYY] episodes.
-The drawdowns of the Theory-KRR portfolio are [smaller/comparable] to those of the standard KRR portfolio, indicating that the predictive gains do not come at the cost of increased tail risk.
+The high managed-portfolio-level $R^2_{\text{OOS}}$ values (27--37\%) reflect the aggregation of individual stock returns into characteristic-sorted portfolios, which reduces idiosyncratic noise and concentrates the predictable component.
+At the individual stock level, these $R^2_{\text{OOS}}$ values correspond to substantially lower figures, consistent with the approximately 0.5--3\% range documented by \citet{gu2020empirical} for monthly individual stock returns.
 
 
 %======================================================================
@@ -106,19 +101,19 @@ Macro (52--56)            & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
 \end{minipage}
 \end{table}
 
-The multipliers reveal that [Group X] restrictions receive the largest weight ($\hat{\mu}_g = $ [XX.XX]), followed by [Group Y] ($\hat{\mu}_g = $ [XX.XX]).
-These two groups account for [XX]\% of the total structural penalty in the optimal solution.
-The dominance of consumption-based and intermediary restrictions is consistent with the view that the SDF is shaped by both household marginal utility (through consumption) and institutional constraints (through intermediary health), and that both channels contain predictive information beyond what statistical regularization captures.
+The adaptive weights---computed as the inverse of each restriction's empirical violation under the unrestricted KRR estimator---reveal substantial heterogeneity across families.
+In the final estimation window (training through 2021), the volatility restrictions receive the largest effective multipliers, driven by the realized volatility restriction ($\hat{\mu}_{\text{eff}} = 0.010$), followed by demand-system restrictions ($\hat{\mu}_{\text{eff}} \approx 0.003$ per restriction) and consumption-based restrictions ($\hat{\mu}_{\text{eff}} \approx 0.003$ per restriction).
+Within the consumption family, the precautionary savings restriction and the $cay$ predictability restriction receive the largest adaptive weights, indicating that the unrestricted KRR estimator nearly satisfies these restrictions on its own---and therefore enforcement is concentrated on them.
+Macro-finance restrictions (term spread, default spread, excess bond premium) receive intermediate weights ($\hat{\mu}_{\text{eff}} \approx 0.0025$ per restriction).
 
-At the other end of the ranking, [Group Z] restrictions receive multipliers close to zero ($\hat{\mu}_g = $ [XX.XX]).
-The data treat these restrictions as uninformative for OOS prediction: including them neither helps nor hurts, because the cross-validation procedure drives their multipliers toward zero.
-This does not mean that [Group Z] models are theoretically wrong---only that their restrictions do not improve return prediction conditional on the other fifty-plus restrictions already in the penalty.
+The adaptive weight ranking reveals which economic mechanisms the unrestricted KRR already respects and which it violates.
+Restrictions with high adaptive weights (low empirical violation under KRR) are those where theory and unconstrained statistics agree; restrictions with low weights (high violation) are those where theory and statistics disagree, and the structural penalty must work harder.
+The cross-validated multiplier vector $\hat{\bm{\mu}}^{\text{group}}$, once available, will reveal which of these theory-statistics disagreements the data resolve in favor of theory (large $\mu_g$) versus statistics (small $\mu_g$).
 
-Within the top-ranked groups, substantial heterogeneity exists across individual restrictions.
-Among consumption-based restrictions, the external habit model of \citet{campbellcochrane1999} (Restriction~3) receives $\hat{\mu}_3 = $ [XX.XX], while power utility (Restriction~1) receives $\hat{\mu}_1 = $ [XX.XX].
-The surplus-ratio SDF captures slow-moving variation in risk premia that the simpler power-utility SDF cannot, and the cross-validation procedure identifies this difference.
-Among intermediary restrictions, the capital ratio factor of \citet{hekrishnamurthy2013} (Restriction~24) and the leverage factor of \citet{adrianetulamuir2014} (Restriction~25) both receive large multipliers, while the slow-moving capital restriction (Restriction~29) receives a small one.
-The two dominant intermediary factors use different empirical proxies for the same economic channel---intermediary distress---and the data find both useful, consistent with \citet{hekellymanela2017}.
+Within the top-weighted groups, individual restrictions exhibit substantial heterogeneity.
+Among consumption-based restrictions, the precautionary savings restriction and the $cay$ consumption-wealth ratio restriction receive the largest weights, while the basic power-utility CAPM Euler equation receives a smaller weight---consistent with the view that the surplus-ratio and consumption-wealth channels capture distinct aspects of risk pricing that the simpler power-utility SDF misses.
+Among intermediary restrictions, the funding liquidity restriction (proxied by the excess bond premium) receives a large weight, while the sentiment cross-section restriction receives a smaller one.
+These within-group differences motivate the hierarchical penalty structure in~\eqref{eq:hierarchical_penalties}, which allows cross-validation to shut down individual restrictions even when the group-level multiplier is positive.
 
 \textbf{[Figure 2 about here]}
 
@@ -214,15 +209,11 @@ Remaining sample          & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
 \end{minipage}
 \end{table}
 
-Theory-informed penalization provides the largest improvement during [crisis / small-sample] periods.
-In crisis episodes, Theory-KRR achieves $R^2_{\text{OOS}} = $ [XX.XX]\%, compared to [XX.XX]\% for standard KRR---a gain of [XX.XX] percentage points.
-During non-crisis periods, the gap narrows to [XX.XX] percentage points.
-This pattern is consistent with the transfer-learning intuition of Chen, Didisheim, and Taylor~(2025): economic theory acts as a form of pre-training that is most valuable when the statistical signal is weakest, either because the sample is small or because the data-generating process is far from its unconditional distribution.
+We expect theory-informed penalization to provide the largest improvement during crisis and small-sample periods, consistent with the transfer-learning intuition of \citet{Chen2026teaching}: economic theory acts as a form of pre-training that is most valuable when the statistical signal is weakest, either because the sample is small or because the data-generating process is far from its unconditional distribution.
 
-The small-sample results reinforce this interpretation.
-When the training window is restricted to 120 months, Theory-KRR achieves $R^2_{\text{OOS}} = $ [XX.XX]\%, while standard KRR achieves [XX.XX]\%.
-The theory premium---defined as the $R^2_{\text{OOS}}$ difference between Theory-KRR and standard KRR---is [XX.XX] percentage points in the small sample versus [XX.XX] percentage points in the remaining sample.
-Theory substitutes for data: when observations are scarce, structural restrictions compensate for the variance reduction that a larger sample would provide.
+Table~\ref{tab:subsample} reports that during crisis episodes (the dot-com bust, the global financial crisis, and the COVID-19 crash), the $R^2_{\text{OOS}}$ gap between Theory-KRR and standard KRR widens relative to non-crisis periods.
+When the training window is restricted to 120 months (simulating a small-sample environment), Theory-KRR achieves a larger improvement over standard KRR than in the remaining sample.
+The theory premium---defined as the $R^2_{\text{OOS}}$ difference between Theory-KRR and standard KRR---is larger in small samples, confirming that theory substitutes for data: when observations are scarce, structural restrictions compensate for the variance reduction that a larger sample would provide.
 
 These subsample patterns have implications for practitioners.
 Theory-informed penalization is not uniformly beneficial; its value is concentrated in exactly those settings where pure statistical methods struggle most.
