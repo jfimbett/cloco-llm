@@ -2,10 +2,35 @@
 Kernel functions for KRR estimation.
 
 Provides Gaussian RBF kernel, median heuristic bandwidth selection,
-and Nyström low-rank approximation.
+and Nyström low-rank approximation. GPU-accelerated paths via PyTorch
+when CUDA is available and USE_GPU=true.
 """
 import numpy as np
 from scipy.spatial.distance import pdist, cdist
+
+from code.config import USE_GPU
+
+# Lazy-init GPU availability flag
+_GPU_READY = None
+
+
+def _check_gpu():
+    """Check if GPU path is usable (cached after first call)."""
+    global _GPU_READY
+    if _GPU_READY is not None:
+        return _GPU_READY
+    if not USE_GPU:
+        _GPU_READY = False
+        return False
+    try:
+        import torch
+        _GPU_READY = torch.cuda.is_available()
+        if _GPU_READY:
+            name = torch.cuda.get_device_name(0)
+            print(f"[GPU] Using {name}")
+    except ImportError:
+        _GPU_READY = False
+    return _GPU_READY
 
 
 def median_heuristic(X: np.ndarray, subsample: int = 5000) -> float:
@@ -26,6 +51,20 @@ def median_heuristic(X: np.ndarray, subsample: int = 5000) -> float:
         X = X[idx]
     dists = pdist(X, metric='euclidean')
     return float(np.median(dists))
+
+
+def _gaussian_rbf_gpu(X: np.ndarray, Y: np.ndarray | None, gamma: float) -> np.ndarray:
+    """GPU path: compute RBF kernel via torch.cdist."""
+    import torch
+    device = 'cuda'
+    X_t = torch.as_tensor(X, dtype=torch.float64, device=device)
+    if Y is None:
+        sq_dists = torch.cdist(X_t, X_t).pow(2)
+    else:
+        Y_t = torch.as_tensor(Y, dtype=torch.float64, device=device)
+        sq_dists = torch.cdist(X_t, Y_t).pow(2)
+    K = torch.exp(-gamma * sq_dists)
+    return K.cpu().numpy()
 
 
 def gaussian_rbf(
@@ -55,6 +94,10 @@ def gaussian_rbf(
 
     gamma = 1.0 / (2.0 * sigma ** 2)
 
+    if _check_gpu():
+        return _gaussian_rbf_gpu(X, Y, gamma)
+
+    # CPU fallback
     if Y is None:
         sq_dists = cdist(X, X, metric='sqeuclidean')
     else:

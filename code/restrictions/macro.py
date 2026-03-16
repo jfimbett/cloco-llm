@@ -1,8 +1,10 @@
 """
-Type B/C: Macro-finance restrictions (#52-56).
+Type A/B: Macro-finance restrictions (#52-56).
 
 Based on macro predictors: term spread, default spread, cay,
 excess bond premium, and risk-free rate effects.
+Factor-based restrictions use Type A (linear SDF); direct
+predictability restrictions use Type B.
 """
 import numpy as np
 from .base import Restriction, RestrictionRegistry
@@ -91,7 +93,7 @@ class EBPPredictability(Restriction):
     Gilchrist-Zakrajsek EBP captures credit market distress.
     """
     def __init__(self):
-        super().__init__('ebp_pred', 'macro', 'C',
+        super().__init__('ebp_pred', 'macro', 'A',
                          'Excess bond premium return predictability')
 
     def penalty(self, f_hat, X, data_context):
@@ -130,7 +132,7 @@ class RiskFreeRateEffect(Restriction):
     Higher rf → lower equity premium (Fed model intuition).
     """
     def __init__(self):
-        super().__init__('rf_effect', 'macro', 'C',
+        super().__init__('rf_effect', 'macro', 'A',
                          'Risk-free rate negative return effect')
 
     def penalty(self, f_hat, X, data_context):
@@ -170,7 +172,7 @@ class MacroFactorStructure(Restriction):
     (term spread, default spread, cay, ebp).
     """
     def __init__(self):
-        super().__init__('macro_factor_structure', 'macro', 'C',
+        super().__init__('macro_factor_structure', 'macro', 'A',
                          'Macro factor structure in expected returns')
 
     def penalty(self, f_hat, X, data_context):

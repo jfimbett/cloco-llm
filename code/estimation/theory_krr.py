@@ -4,19 +4,19 @@ Theory-Informed Kernel Ridge Regression (Theory-KRR).
 Extends standard KRR with structural penalty terms derived from
 economic theory. The objective is:
 
-    min_f  ||y - f||² + n·λ·||f||²_H + Σ_j μ_j · w_j · C_j(f)
+    min_f  ||y - f||² + n·λ·||f||²_H + Σ_j μ_j · C_j(f)
 
 where C_j are structural restrictions from asset pricing theory.
 
-For quadratic penalties (Types A/B/C): solved via augmented linear system.
+For quadratic penalties (Types A/B): solved via augmented linear system.
 For non-quadratic penalties (Type D): L-BFGS with quadratic warm start.
 """
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
 
-from code.utils.kernel import gaussian_rbf, median_heuristic
-from code.restrictions.base import Restriction, adaptive_weights
+from code.utils.kernel import gaussian_rbf, median_heuristic, _check_gpu
+from code.estimation.krr import _cholesky_solve
+from code.restrictions.base import Restriction
 
 
 # --- Default group mapping ---
@@ -58,7 +58,6 @@ class TheoryKRR:
         self.X_train_ = None
         self.sigma_used_ = None
         self.mu_values_ = None
-        self.adaptive_weights_ = None
         self.lambda_stat_ = None
 
     def _group_restrictions(self) -> dict[int, list[Restriction]]:
@@ -69,20 +68,15 @@ class TheoryKRR:
             grouped.setdefault(g, []).append(r)
         return grouped
 
-    def _compute_adaptive_weights(
-        self,
-        f_krr: np.ndarray,
-        X: np.ndarray,
-        data_context: dict,
-    ) -> dict[str, float]:
-        """Compute adaptive weights for each restriction."""
-        weights = {}
-        grouped = self._group_restrictions()
-        for g_idx, g_restrictions in grouped.items():
-            w = adaptive_weights(g_restrictions, f_krr, X, data_context)
-            for r, w_j in zip(g_restrictions, w):
-                weights[r.name] = float(w_j)
-        return weights
+    def _active_restrictions(self, mu_groups: dict[int, float]) -> list[tuple[Restriction, float]]:
+        """Return only restrictions whose group has mu > 0, with their mu values."""
+        active = []
+        for r in self.restrictions:
+            g_idx = self.groups.get(r.family, 0)
+            mu_g = mu_groups.get(g_idx, 0.0)
+            if mu_g != 0:
+                active.append((r, mu_g))
+        return active
 
     def fit(
         self,
@@ -91,7 +85,7 @@ class TheoryKRR:
         lambda_stat: float = 1e-3,
         mu_groups: dict[int, float] | None = None,
         data_context: dict | None = None,
-        f_krr: np.ndarray | None = None,
+        K_precomputed: np.ndarray | None = None,
     ):
         """
         Fit Theory-Informed KRR.
@@ -103,14 +97,17 @@ class TheoryKRR:
         lambda_stat : statistical regularization
         mu_groups : dict mapping group index → μ_g multiplier
         data_context : dict of data arrays aligned with X
-        f_krr : unrestricted KRR predictions (for adaptive weights)
+        K_precomputed : optional pre-computed kernel matrix (avoids recomputation)
         """
         self.lambda_stat_ = lambda_stat
         n = X.shape[0]
         self.X_train_ = X.copy()
         self.sigma_used_ = self.sigma if self.sigma else median_heuristic(X)
 
-        K = gaussian_rbf(X, sigma=self.sigma_used_)
+        if K_precomputed is not None:
+            K = K_precomputed
+        else:
+            K = gaussian_rbf(X, sigma=self.sigma_used_)
 
         if mu_groups is None:
             mu_groups = {i: 0.0 for i in range(8)}
@@ -119,20 +116,8 @@ class TheoryKRR:
         if data_context is None:
             data_context = {}
 
-        # Compute adaptive weights using unrestricted KRR
-        if f_krr is None:
-            A_base = K + n * lambda_stat * np.eye(n)
-            c, low = cho_factor(A_base)
-            alpha_krr = cho_solve((c, low), y)
-            f_krr = K @ alpha_krr
-
-        self.adaptive_weights_ = self._compute_adaptive_weights(f_krr, X, data_context)
-
-        # Always use L-BFGS with unrestricted KRR as warm start.
-        # The Hessian-based augmented linear system is theoretically cleaner
-        # for quadratic penalties but O(n²) per restriction for numerical
-        # Hessians makes it impractical. L-BFGS uses only gradients: O(n).
-        alpha_krr_warm = cho_solve(cho_factor(K + n * lambda_stat * np.eye(n)), y)
+        # Use L-BFGS with unrestricted KRR as warm start.
+        alpha_krr_warm = _cholesky_solve(K, y, n, lambda_stat)
         self.alpha_ = self._fit_lbfgs(
             K, y, n, lambda_stat, mu_groups, data_context, alpha_krr_warm
         )
@@ -151,43 +136,45 @@ class TheoryKRR:
     ) -> np.ndarray:
         """L-BFGS optimization for non-quadratic penalties."""
 
+        # Pre-filter to active restrictions only (skip zero-mu)
+        active = self._active_restrictions(mu_groups)
+
+        # If no active restrictions, warm start IS the solution
+        if not active:
+            return alpha_init
+
+        # Pre-compute K @ alpha products that are reused
+        # Cache K as contiguous array for fast matmul
+        K_c = np.ascontiguousarray(K)
+
         def objective(alpha):
-            f_hat = K @ alpha
+            f_hat = K_c @ alpha
             # Data fit: ||y - Kα||²
             residual = y - f_hat
             loss = np.dot(residual, residual)
             # RKHS penalty: nλ α^T K α
-            loss += n * self.lambda_stat_ * np.dot(alpha, K @ alpha)
-            # Structural penalties
-            for r in self.restrictions:
-                g_idx = self.groups.get(r.family, 0)
-                mu_g = mu_groups.get(g_idx, 0.0)
-                w_j = self.adaptive_weights_.get(r.name, 1.0)
-                if mu_g * w_j == 0:
-                    continue
+            loss += n * self.lambda_stat_ * np.dot(alpha, K_c @ alpha)
+            # Structural penalties (active only)
+            for r, mu_g in active:
                 try:
-                    loss += mu_g * w_j * r.penalty(f_hat, self.X_train_, data_context)
+                    loss += mu_g * r.penalty(f_hat, self.X_train_, data_context)
                 except Exception:
                     continue
             return loss
 
         def gradient(alpha):
-            f_hat = K @ alpha
+            f_hat = K_c @ alpha
+            K_alpha = K_c @ alpha
             # Data fit gradient: -2K^T(y - Kα)
             residual = y - f_hat
-            grad = -2.0 * K @ residual
+            grad = -2.0 * K_c @ residual
             # RKHS penalty gradient: 2nλKα
-            grad += 2.0 * n * self.lambda_stat_ * K @ alpha
-            # Structural penalty gradients
-            for r in self.restrictions:
-                g_idx = self.groups.get(r.family, 0)
-                mu_g = mu_groups.get(g_idx, 0.0)
-                w_j = self.adaptive_weights_.get(r.name, 1.0)
-                if mu_g * w_j == 0:
-                    continue
+            grad += 2.0 * n * self.lambda_stat_ * K_alpha
+            # Structural penalty gradients (active only)
+            for r, mu_g in active:
                 try:
                     g_r = r.penalty_gradient(f_hat, self.X_train_, data_context)
-                    grad += mu_g * w_j * K @ g_r
+                    grad += mu_g * K_c @ g_r
                 except Exception:
                     continue
             return grad
@@ -209,14 +196,13 @@ class TheoryKRR:
 
     def get_multiplier_values(self) -> dict:
         """Return the effective μ_j values for each restriction."""
-        if self.mu_values_ is None or self.adaptive_weights_ is None:
+        if self.mu_values_ is None:
             return {}
         result = {}
         for r in self.restrictions:
             g_idx = self.groups.get(r.family, 0)
             mu_g = self.mu_values_.get(g_idx, 0.0)
-            w_j = self.adaptive_weights_.get(r.name, 1.0)
-            result[r.name] = mu_g * w_j
+            result[r.name] = mu_g
         return result
 
     def get_penalty_values(

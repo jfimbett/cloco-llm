@@ -13,17 +13,20 @@ import pandas as pd
 import time
 import json
 from pathlib import Path
+from joblib import Parallel, delayed
 
 from code.utils.data_loader import (
     load_panel, get_characteristic_cols, get_macro_cols,
     build_managed_portfolios,
 )
 from code.utils.evaluation import r2_oos, diebold_mariano
-from code.estimation.krr import StandardKRR
+from code.utils.kernel import gaussian_rbf, median_heuristic
+from code.estimation.krr import StandardKRR, _cholesky_solve
 from code.estimation.theory_krr import TheoryKRR, DEFAULT_GROUPS
 from code.restrictions import build_all_restrictions
 from code.baselines.linear import HistoricalMean, RidgeModel
 from code.baselines.ensemble import RandomForestModel
+from code.config import TEST_MODE, TEST_MAX_ROLLING_WINDOWS
 
 
 # --- mu configurations to evaluate ---
@@ -74,6 +77,19 @@ def build_data_context(df, macro_cols):
     return dc
 
 
+def _evaluate_config(config_name, mu_config, restrictions, X_tr, y_tr, X_val, y_val,
+                     best_krr_lambda, dc_tr, K_tr, sigma_used):
+    """Evaluate a single mu configuration. Designed for parallel execution."""
+    try:
+        tikrr = TheoryKRR(restrictions=restrictions, sigma=sigma_used)
+        tikrr.fit(X_tr, y_tr, best_krr_lambda, mu_config, dc_tr, K_precomputed=K_tr)
+        val_pred = tikrr.predict(X_val)
+        val_mse = float(np.mean((y_val - val_pred) ** 2))
+        return config_name, val_mse
+    except Exception as e:
+        return config_name, np.inf
+
+
 def run_cv_estimation():
     np.random.seed(42)
     out_path = Path('output')
@@ -94,6 +110,10 @@ def run_cv_estimation():
     oos_months = months[(months >= start_oos)]
     for m in oos_months[::36]:
         rebalance_months.append(m)
+
+    if TEST_MODE:
+        rebalance_months = rebalance_months[:TEST_MAX_ROLLING_WINDOWS]
+        print(f"[TEST_MODE] Limiting to {len(rebalance_months)} rolling windows")
 
     # Store results per window
     window_results = []
@@ -151,6 +171,11 @@ def run_cv_estimation():
 
         print(f"  Validation split: train={X_tr.shape[0]}, val={X_val.shape[0]}")
 
+        # --- Pre-compute kernel matrix for training split (reused across all configs) ---
+        sigma_tr = median_heuristic(X_tr)
+        K_tr = gaussian_rbf(X_tr, sigma=sigma_tr)
+        print(f"  Kernel matrix computed: {K_tr.shape} ({time.time()-t0:.1f}s)")
+
         # --- Baselines (fit on full training, predict test) ---
         # Historical mean
         hm = HistoricalMean()
@@ -170,17 +195,20 @@ def run_cv_estimation():
         pred_rf = rf.predict(X_test)
         all_preds['rf'].append(pred_rf)
 
-        # Standard KRR (tune lambda on validation set)
+        # Standard KRR (tune lambda on validation set using cached kernel)
         best_krr_lambda = 0.01
         best_krr_val_mse = np.inf
         for lam in LAMBDA_GRID:
-            krr_tmp = StandardKRR(lambda_stat=lam)
-            krr_tmp.fit(X_tr, y_tr)
-            val_pred = krr_tmp.predict(X_val)
-            val_mse = np.mean((y_val - val_pred) ** 2)
-            if val_mse < best_krr_val_mse:
-                best_krr_val_mse = val_mse
-                best_krr_lambda = lam
+            try:
+                alpha_tmp = _cholesky_solve(K_tr, y_tr, len(y_tr), lam)
+                K_val_tr = gaussian_rbf(X_val, X_tr, sigma=sigma_tr)
+                val_pred = K_val_tr @ alpha_tmp
+                val_mse = np.mean((y_val - val_pred) ** 2)
+                if val_mse < best_krr_val_mse:
+                    best_krr_val_mse = val_mse
+                    best_krr_lambda = lam
+            except Exception:
+                continue
 
         krr = StandardKRR(lambda_stat=best_krr_lambda)
         krr.fit(X_train_full, y_train_full)
@@ -188,36 +216,36 @@ def run_cv_estimation():
         all_preds['krr'].append(pred_krr)
         print(f"  KRR: lambda={best_krr_lambda}, val_mse={best_krr_val_mse:.8f}")
 
-        # --- Theory-KRR: evaluate mu configurations on validation set ---
-        print(f"  Evaluating {len(MU_CONFIGS)} mu configurations...")
+        # --- Theory-KRR: evaluate mu configurations in parallel ---
+        print(f"  Evaluating {len(MU_CONFIGS)} mu configurations (parallel)...")
+        t_mu = time.time()
+        restrictions_list = registry.all()
+
+        parallel_results = Parallel(n_jobs=-1, prefer="threads")(
+            delayed(_evaluate_config)(
+                config_name, mu_config, restrictions_list,
+                X_tr, y_tr, X_val, y_val,
+                best_krr_lambda, dc_tr, K_tr, sigma_tr,
+            )
+            for config_name, mu_config in MU_CONFIGS.items()
+        )
+
         config_results = {}
         best_config = 'krr_only'
         best_val_mse = np.inf
+        for config_name, val_mse in parallel_results:
+            config_results[config_name] = val_mse
+            if val_mse < best_val_mse:
+                best_val_mse = val_mse
+                best_config = config_name
 
-        for config_name, mu_config in MU_CONFIGS.items():
-            t1 = time.time()
-            try:
-                tikrr = TheoryKRR(restrictions=registry.all())
-                tikrr.fit(X_tr, y_tr, best_krr_lambda, mu_config, dc_tr)
-                val_pred = tikrr.predict(X_val)
-                val_mse = float(np.mean((y_val - val_pred) ** 2))
-                config_results[config_name] = val_mse
-                if val_mse < best_val_mse:
-                    best_val_mse = val_mse
-                    best_config = config_name
-                dt = time.time() - t1
-                if dt > 5:
-                    print(f"    {config_name}: val_mse={val_mse:.8f} ({dt:.0f}s)")
-            except Exception as e:
-                config_results[config_name] = np.inf
-                print(f"    {config_name}: FAILED ({e})")
-
+        print(f"  All configs evaluated in {time.time()-t_mu:.1f}s")
         print(f"  Best config: {best_config} (val_mse={best_val_mse:.8f})")
         print(f"  KRR baseline val_mse: {config_results.get('krr_only', np.nan):.8f}")
 
         # --- Fit best Theory-KRR on full training, predict test ---
         best_mu = MU_CONFIGS[best_config]
-        tikrr_final = TheoryKRR(restrictions=registry.all())
+        tikrr_final = TheoryKRR(restrictions=restrictions_list)
         tikrr_final.fit(X_train_full, y_train_full, best_krr_lambda,
                         best_mu, dc_train_full)
         pred_tikrr = tikrr_final.predict(X_test)

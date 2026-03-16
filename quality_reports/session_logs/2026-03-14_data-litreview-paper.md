@@ -83,5 +83,41 @@
 - Industry filter applied after Compustat merge (need SIC codes from Compustat)
 - Ranking done after all filters so percentiles reflect actual investment universe
 
+### 8. Tables/Figures After References + Appendix Merge (2026-03-16)
+- Created `paper/tables_and_figures.tex` — all 12 tables collected after references
+- Extracted tables from `restrictions.tex` (8), `results.tex` (3), `empirical.tex` (1)
+- Removed "[Figure 3 about here]" placeholder from results.tex
+- Changed float specifiers from `[H]` to `[h!]`, removed `\usepackage{float}`
+- Merged appendix: `proofs.tex` → `appendix/appendix.tex`; deleted placeholder files
+- Updated `main.tex` input order: body → references → tables_and_figures → appendix
+- Compiles cleanly: 73 pages, only 2 undefined refs (fig:bias_variance — not yet created)
+
+### 9. GKX Table Format Gap Analysis (2026-03-16)
+- Read Gu-Kelly-Xiu (2020) Tables 1-5 and Figures 4-5 from `master_supporting_docs/`
+- Identified 3 missing table types vs. GKX:
+  1. **GKX-style model horse race** — models as columns, multiple metrics (R²_OOS, Sharpe, CER), subsamples as rows. Our `tab:oos_performance` is transposed and single-metric.
+  2. **Pairwise DM test matrix** — lower-triangular, all model pairs. We only have DM vs. historical mean.
+  3. **Restriction importance table** — analogous to GKX Figure 5 / Table 4 for "which variables matter". Our `tab:theory_ranking` shows winning family per period but not a structured importance ranking.
+- These are results tables — LaTeX shells can be designed now, numbers come from estimation.
+
+### 10. TEST_MODE Implementation via .env (2026-03-16)
+- Created `.env` with `TEST_MODE=true`, `TEST_MAX_STOCKS_PER_MONTH=200`, `TEST_MAX_ROLLING_WINDOWS=3`
+- Created `code/config.py` — reads `.env`, exports typed constants (no external dependencies)
+- Wired into `code/utils/data_loader.py` — `load_panel()` subsamples to 200 stocks/month
+- Wired into all 3 estimation scripts (`run_estimation.py`, `run_cv_estimation.py`, `run_fast_estimation.py`) — caps rolling windows to 3
+- `.env` already in `.gitignore`
+- Updated `CLAUDE.md` to reference `.env` instead of inline `TEST_MODE=true`
+- Verified: `python -c "from code.config import TEST_MODE; print(TEST_MODE)"` → `True`
+
+---
+
+## Decisions
+- `.env` approach chosen over dotenv package — zero dependencies, simple key=value parsing
+- TEST_MODE subsamples stocks (200/month) AND limits windows (3) — both needed for speed
+- `os.environ.setdefault` used so env vars can be overridden from shell if needed
+- GKX-style tables deferred until estimation pipeline produces the numbers
+
 ## Next Steps
-- Begin estimation code (restrictions, KRR estimator, baselines)
+- Design LaTeX shells for GKX-aligned results tables (model horse race, DM matrix, restriction importance)
+- Run estimation in TEST_MODE to verify end-to-end pipeline
+- Fill table shells with test-mode results

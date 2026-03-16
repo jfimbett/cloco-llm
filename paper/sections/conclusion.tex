@@ -24,7 +24,6 @@ For methodology, the framework shows that the LLM-Lasso principle generalizes: s
 For model evaluation, the cross-validated multipliers $\bm{\mu}$ provide a new lens for comparing asset-pricing theories---not by their in-sample fit to moments or their ability to rationalize anomalies, but by their marginal out-of-sample forecasting value conditional on all competing theories.
 
 Several limitations define avenues for future work.
-The structural parameters $\hat{\theta}_j$ entering each penalty are pre-estimated by GMM, introducing estimation error that propagates into the multiplier estimates; joint estimation of $(\hat{f}, \bm{\mu}, \bm{\theta})$ is a natural extension, though computationally demanding.
-Our eight-group cross-validation aggregates heterogeneity within groups---estimating individual $\mu_j$ for all fifty-six restrictions with hierarchical priors would sharpen the ranking at the cost of a larger hyperparameter search.
+Our eight-group cross-validation aggregates heterogeneity within groups---estimating individual $\mu_j$ for all fifty-six restrictions would sharpen the ranking at the cost of a larger hyperparameter search.
 The framework applies to kernel methods, but the same logic extends to neural networks: theory-informed regularization terms in the loss function of a deep network would combine the flexibility of neural architectures with the discipline of economic structure.
 Finally, our empirical analysis covers U.S.\ equities; international markets, corporate bonds, and other asset classes present different challenges and different theoretical priors, and the relative ranking of theories may differ across these domains.

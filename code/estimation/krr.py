@@ -8,7 +8,24 @@ the kernel approach.
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve
 
-from code.utils.kernel import gaussian_rbf, median_heuristic
+from code.utils.kernel import gaussian_rbf, median_heuristic, _check_gpu
+
+
+def _cholesky_solve(K: np.ndarray, y: np.ndarray, n: int, lambda_stat: float) -> np.ndarray:
+    """Solve (K + nλI)α = y via Cholesky, using GPU if available."""
+    if _check_gpu():
+        import torch
+        device = 'cuda'
+        K_gpu = torch.as_tensor(K, dtype=torch.float64, device=device)
+        A_gpu = K_gpu + n * lambda_stat * torch.eye(n, device=device, dtype=torch.float64)
+        L = torch.linalg.cholesky(A_gpu)
+        y_gpu = torch.as_tensor(y, dtype=torch.float64, device=device).unsqueeze(1)
+        alpha = torch.cholesky_solve(y_gpu, L).squeeze(1)
+        return alpha.cpu().numpy()
+
+    A = K + n * lambda_stat * np.eye(n)
+    c, low = cho_factor(A)
+    return cho_solve((c, low), y)
 
 
 class StandardKRR:
@@ -46,11 +63,7 @@ class StandardKRR:
         self.sigma_used_ = self.sigma if self.sigma else median_heuristic(X)
 
         K = gaussian_rbf(X, sigma=self.sigma_used_)
-
-        # Solve (K + nλI) α = y
-        A = K + n * self.lambda_stat * np.eye(n)
-        c, low = cho_factor(A)
-        self.alpha_ = cho_solve((c, low), y)
+        self.alpha_ = _cholesky_solve(K, y, n, self.lambda_stat)
 
         return self
 
@@ -85,26 +98,25 @@ class StandardKRR:
         # Fix sigma on full training set
         sigma = self.sigma if self.sigma else median_heuristic(X)
 
+        # Pre-compute full kernel matrix and slice per fold
+        K_full = gaussian_rbf(X, sigma=sigma)
+
         for lam in lambda_grid:
             mse_folds = []
             for train_idx, val_idx in cv_splits:
-                X_tr, y_tr = X[train_idx], y[train_idx]
-                X_val, y_val = X[val_idx], y[val_idx]
-
-                n_tr = X_tr.shape[0]
-                K_tr = gaussian_rbf(X_tr, sigma=sigma)
-                A = K_tr + n_tr * lam * np.eye(n_tr)
+                K_tr = K_full[np.ix_(train_idx, train_idx)]
+                y_tr = y[train_idx]
+                n_tr = len(train_idx)
 
                 try:
-                    c, low = cho_factor(A)
-                    alpha = cho_solve((c, low), y_tr)
-                except np.linalg.LinAlgError:
+                    alpha = _cholesky_solve(K_tr, y_tr, n_tr, lam)
+                except (np.linalg.LinAlgError, Exception):
                     mse_folds.append(np.inf)
                     continue
 
-                K_val = gaussian_rbf(X_val, X_tr, sigma=sigma)
+                K_val = K_full[np.ix_(val_idx, train_idx)]
                 pred = K_val @ alpha
-                mse_folds.append(np.mean((y_val - pred) ** 2))
+                mse_folds.append(np.mean((y[val_idx] - pred) ** 2))
 
             avg_mse = np.mean(mse_folds)
             if avg_mse < best_mse:

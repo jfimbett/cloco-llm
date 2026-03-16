@@ -11,6 +11,16 @@ Keep under 150 lines, since Claude loads it every session.
 
 ---
 
+## Global Variables
+
+Configuration lives in `.env` (gitignored). Key variable:
+
+- `TEST_MODE=true` — subsample data (200 stocks/month, 3 rolling windows) for fast iteration. Paper is written as if full data. Flip to `false` for production run.
+- `TEST_MAX_STOCKS_PER_MONTH=200` — stocks per month in test mode
+- `TEST_MAX_ROLLING_WINDOWS=3` — max rolling windows in test mode
+
+These are read by `code/config.py` and applied in `data_loader.py` and all estimation scripts.
+
 ## Core Principles
 
 - **Plan first** -- enter plan mode before non-trivial tasks.

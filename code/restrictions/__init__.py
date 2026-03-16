@@ -1,5 +1,5 @@
 # Structural restrictions for Theory-Informed KRR
-from .base import Restriction, RestrictionRegistry, adaptive_weights
+from .base import Restriction, RestrictionRegistry
 from .consumption import register_consumption_restrictions
 from .production import register_production_restrictions
 from .intermediary import register_intermediary_restrictions

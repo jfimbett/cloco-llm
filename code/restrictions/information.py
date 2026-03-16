@@ -1,8 +1,9 @@
 """
-Type A/C: Information and learning restrictions (#32-37).
+Type A: Information and learning restrictions (#32-37).
 
 Based on information frictions, learning models,
 forecast dispersion, and macro uncertainty.
+All restrictions are Type A (Euler equation penalties).
 """
 import numpy as np
 from .base import Restriction, RestrictionRegistry
@@ -13,7 +14,7 @@ class ForecastDispersionEffect(Restriction):
     Information uncertainty premium (Diether et al. 2002).
     """
     def __init__(self):
-        super().__init__('forecast_dispersion', 'information', 'C',
+        super().__init__('forecast_dispersion', 'information', 'A',
                          'Forecast dispersion uncertainty premium')
 
     def penalty(self, f_hat, X, data_context):
@@ -52,7 +53,7 @@ class MacroUncertaintyPricing(Restriction):
     Higher VIX → higher expected returns.
     """
     def __init__(self):
-        super().__init__('macro_uncertainty', 'information', 'C',
+        super().__init__('macro_uncertainty', 'information', 'A',
                          'Macro uncertainty risk premium (VIX)')
 
     def penalty(self, f_hat, X, data_context):

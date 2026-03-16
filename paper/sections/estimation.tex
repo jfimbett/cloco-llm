@@ -46,35 +46,46 @@ At the other extreme, the Gaussian kernel with bandwidth $\sigma \to 0$ produces
 The joint configuration of $\sigma$, $\lambda_{\mathrm{stat}}$, and $\bm{\mu}$ determines the estimator's regularization, and cross-validation selects the balance that minimizes OOS prediction error.
 
 %======================================================================
-\subsection{Pre-Estimation of Structural Parameters}\label{sub:pre_estimation}
+\subsection{Estimation of Structural Parameters}\label{sub:pre_estimation}
 %======================================================================
 
 Each structural penalty $C_j(f)$ depends on model-specific parameters $\theta_j$ that characterize the underlying economic model.
 For consumption-based models, $\theta_j$ includes the coefficient of relative risk aversion $\gamma$, the elasticity of intertemporal substitution $\psi$, the subjective discount factor $\delta$, and the habit persistence parameter $b$.
 For production-based models, $\theta_j$ governs the curvature of the adjustment cost function.
-For intermediary models, $\theta_j$ parameterizes the leverage constraint or capital requirement.
+For intermediary models, $\theta_j$ parameterizes the SDF loadings on the intermediary factor.
+We consider three approaches to estimating $\theta_j$, ordered from most to least principled.
 
-We treat these structural parameters as known at estimation time, obtained in a first stage that is separate from the KRR optimization.
-Two approaches are available.
+\paragraph{Approach 1: Joint estimation (preferred).}
+The most principled approach estimates $f$ and $\{\theta_j\}_{j=1}^J$ simultaneously:
+\begin{equation}\label{eq:joint_estimation}
+(\hat{f}, \hat{\theta}_1, \ldots, \hat{\theta}_J) \;=\; \argmin_{f \in \mathcal{H}, \, \theta_1, \ldots, \theta_J} \;
+\frac{1}{n}\sum_s (R_s - f(\mathbf{X}_s))^2 + \lambda_{\mathrm{stat}}\|f\|_{\mathcal{H}}^2 + \sum_j \mu_j\, C_j(f; \theta_j).
+\end{equation}
+This optimization is convex in $f$ (given $\theta$) and generally nonconvex in $\theta$, but alternating minimization---updating $f$ given $\theta$ and then $\theta$ given $f$---converges reliably from the pre-estimation starting point.
+Joint estimation is the most principled approach because it allows the structural parameters and the nonparametric function to adapt to each other: a consumption-based SDF with risk aversion $\gamma$ that is optimal in isolation may not be optimal when combined with intermediary and production penalties.
 
-\paragraph{Calibration from the literature.}
-For parameters with well-established values, we adopt published calibrations from the original papers.
-We set the subjective discount factor $\delta = 0.99$ (monthly) in all consumption-based models and use the habit persistence parameter $b = 0.87$ from Campbell and Cochrane~(1999) for the external habit model.
-Transparency and reproducibility are the primary advantages: the penalty $C_j(f)$ is fully determined by the data and a known parameter vector, with no researcher discretion at this stage.
-The risk is that published parameter values, typically calibrated to match aggregate moments in a specific sample, may not be appropriate for our cross-sectional return prediction task.
-
-\paragraph{Pre-estimation from macro data.}
-For parameters that are sample-specific or that lack consensus values, we pre-estimate $\hat{\theta}_j$ by GMM applied to aggregate consumption Euler equations.
-For each consumption-based SDF model $j$ with SDF $M_j(\theta_j, \mathbf{X}_t, \mathbf{X}_{t+1})$, we estimate
+\paragraph{Approach 2: Pre-estimation (two-stage).}
+For computational simplicity, one can pre-estimate $\hat{\theta}_j$ in a first stage that is separate from the KRR optimization.
+For each consumption-based SDF model $j$, we estimate
 \begin{equation}\label{eq:gmm_first_stage}
 \hat{\theta}_j = \argmin_{\theta_j} \left\|\frac{1}{T}\sum_{t=1}^{T} \mathbf{z}_t \left[M_j(\theta_j, \mathbf{X}_t, \mathbf{X}_{t+1})\, R_{m,t+1}^{\mathrm{gross}} - 1\right]\right\|_{\hat{\mathbf{W}}^{-1}}^2,
 \end{equation}
 where $\mathbf{z}_t$ is a vector of instruments (lagged consumption growth, the dividend-price ratio, the term spread) and $\hat{\mathbf{W}}$ is an HAC-consistent estimate of the instrument covariance matrix.
 For production-based models, we estimate adjustment cost parameters from firm-level investment regressions.
+For intermediary models, the SDF loadings $(\hat{a}_j, \hat{b}_j)$ are estimated by GMM on the Euler equation $\E[M_j R^{\mathrm{gross}}] = 1$ using test assets.
 The pre-estimated $\hat{\theta}_j$ is then plugged into $C_j(f)$ and treated as fixed during the second-stage KRR optimization.
+This approach ignores the interaction between $f$ and $\theta$: the structural parameters estimated from aggregate moments may not be optimal for cross-sectional return prediction.
 
-We adopt a hybrid strategy: calibrate parameters for which the literature provides precise, widely accepted values ($\delta$, $b$), and pre-estimate parameters that are sensitive to the sample period or data frequency ($\gamma$, $\psi$).
-To assess sensitivity, we report results over a grid of values for the most influential parameters:
+\paragraph{Approach 3: Calibration.}
+For parameters with well-established values, we adopt published calibrations from the original papers.
+We set $\delta = 0.99$ (monthly) in all consumption-based models and use $b = 0.87$ from \citet{campbellcochrane1999} for the external habit model.
+This is the simplest approach: $C_j(f)$ is fully determined by the data and a known parameter vector, with no estimation of $\theta_j$.
+The risk is that published parameter values, calibrated to match aggregate moments in a specific sample, may not be appropriate for cross-sectional return prediction.
+
+\paragraph{Implementation.}
+Our baseline uses joint estimation (Approach~1), initialized from the pre-estimation values (Approach~2).
+Robustness analysis compares all three approaches.
+For the sensitivity analysis, we report results over a grid of values for the most influential parameters:
 \begin{equation}\label{eq:sensitivity_grid}
 \gamma \in \{2, 5, 10, 20\}, \qquad \delta \in \{0.95, 0.97, 0.99\}.
 \end{equation}
@@ -86,7 +97,7 @@ This grid spans the range of calibrations used in the asset-pricing literature, 
 
 The full hyperparameter vector of Theory-KRR is $(\lambda_{\mathrm{stat}}, \mu_1, \ldots, \mu_J)$, where $J = 56$ in our baseline specification.
 A 57-dimensional grid search is computationally infeasible.
-We reduce dimensionality by exploiting the economic structure of the restrictions.
+We reduce dimensionality by exploiting the economic structure of the restrictions and adopt the three-way temporal split of \citet{gu2020empirical} (Section~1.1) for hyperparameter selection.
 
 \paragraph{Grouped penalties.}
 We group the 56 restrictions into $G = 8$ families corresponding to the eight economic model classes cataloged in Section~\ref{sec:restrictions}: consumption-based Euler equations, production-based restrictions, intermediary restrictions, information and learning restrictions, demand-system restrictions, variance and volatility restrictions, behavioral restrictions, and macro-finance restrictions.
@@ -98,27 +109,18 @@ This reduces the search space from 61 dimensions to 9: one statistical penalty $
 The grouping is motivated by the observation that restrictions within the same economic family share a common source of identification and are likely to have correlated empirical content.
 The grouping is not restrictive in the dimension that matters: cross-validation can set any group's multiplier to zero, shutting down that entire family of restrictions.
 
-\paragraph{Hierarchical penalties.}
-Within each group, individual restrictions may differ in empirical tightness.
-An adaptive refinement assigns restriction-specific weights:
-\begin{equation}\label{eq:hierarchical_penalties}
-\mu_j = \mu_{g(j)}^{\mathrm{group}} \cdot w_j, \qquad w_j = \frac{1}{\tilde{C}_j(\hat{f}^{\mathrm{KRR}}) + \epsilon},
-\end{equation}
-where $\hat{f}^{\mathrm{KRR}}$ is the unrestricted (standard) KRR estimator and $\epsilon > 0$ is a small constant that prevents division by zero.
-The weight $w_j$ is inversely proportional to the empirical violation of restriction $j$ under the unrestricted estimator.
-Restrictions that the data nearly satisfy on their own receive large weights (strong enforcement), while restrictions that the data grossly violate receive small weights (weak enforcement).
-This mirrors the adaptive penalty logic of the LLM-Lasso, where text-derived priors modulate variable-specific penalty weights: here, the unrestricted fit serves as the prior on which restrictions are empirically plausible.
-
-\paragraph{Temporal cross-validation.}
-Time-series dependence in asset returns invalidates standard $K$-fold cross-validation.
-We use leave-one-year-out (LOYO) temporal CV.
-For each year $s$ in the evaluation period, we train on all data excluding year $s$ and predict returns in year $s$.
-The CV criterion selects the hyperparameter vector that minimizes average squared prediction error across left-out years:
+\paragraph{Three-way temporal split.}
+Following the sample-splitting convention of \citet{gu2020empirical}, we partition the time series into three non-overlapping periods:
+\begin{enumerate}
+\item \textbf{Training sample} (1960--1986): estimate $f(\cdot)$ and all structural parameters $\hat{\theta}_j$ for each candidate hyperparameter configuration.
+\item \textbf{Validation sample} (1987--2000): select the hyperparameter vector $(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}})$ that minimizes average squared prediction error:
 \begin{equation}\label{eq:cv_criterion}
-(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}}) = \argmin_{\lambda_{\mathrm{stat}}, \bm{\mu}^{\mathrm{group}}} \frac{1}{|\mathcal{S}|}\sum_{s \in \mathcal{S}} \frac{1}{n_s}\sum_{(i,t) \in s} \left(R_{i,t+1} - \hat{f}_{-s}(\mathbf{X}_{i,t})\right)^2,
+(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}}) = \argmin_{\lambda_{\mathrm{stat}}, \bm{\mu}^{\mathrm{group}}} \frac{1}{n_{\mathrm{val}}}\sum_{(i,t) \in \mathcal{S}_{\mathrm{val}}} \left(R_{i,t+1} - \hat{f}_{\mathrm{train}}(\mathbf{X}_{i,t})\right)^2,
 \end{equation}
-where $\hat{f}_{-s}$ denotes the estimator trained on all data excluding year $s$, and $n_s$ is the number of observations in year $s$.
-LOYO preserves temporal separation between training and evaluation sets, preventing look-ahead bias.
+where $\hat{f}_{\mathrm{train}}$ is estimated using training data only.
+\item \textbf{Testing sample} (2001--present): evaluate out-of-sample performance using the selected hyperparameters. This sample is never used for estimation or tuning.
+\end{enumerate}
+The 1987 validation cutoff follows the convention in \citet{gu2020empirical} and ensures a 27-year training window. The three-way split provides a clean separation: the training sample determines $f$ and $\hat{\theta}_j$, the validation sample tunes $(\lambda_{\mathrm{stat}}, \bm{\mu})$, and the testing sample evaluates OOS performance without contamination from hyperparameter selection.
 
 \paragraph{Search strategy.}
 We search the 9-dimensional hyperparameter space using random search with 200 draws.
@@ -140,7 +142,7 @@ The full random search over 200 draws completes in approximately 100 minutes per
 By Proposition~\ref{prop:representer}, the estimator $\hat{f}(\cdot) = \sum_{s=1}^n \hat{\alpha}_s\, k(\mathbf{X}_s, \cdot)$ is parameterized by the coefficient vector $\hat{\bm{\alpha}} \in \R^n$.
 The optimization problem~\eqref{eq:finite_dim} is therefore finite-dimensional: we optimize over $\bm{\alpha}$ rather than over functions in $\Hcal$.
 
-\paragraph{Quadratic penalties (Types A, B, C).}
+\paragraph{Quadratic penalties (Types A and B).}
 When all active penalties are quadratic in the fitted values $\hat{\mathbf{f}} = \mathbf{K}\bm{\alpha}$, the objective is a convex quadratic in $\bm{\alpha}$, and the solution is given by the linear system~\eqref{eq:alpha_star}.
 The dominant computational cost is the $O(n^3)$ matrix inversion (or, equivalently, the Cholesky decomposition of the $n \times n$ system matrix).
 We solve the system using Cholesky factorization, which is numerically stable and exploits the positive definiteness guaranteed by $\lambda_{\mathrm{stat}} > 0$.

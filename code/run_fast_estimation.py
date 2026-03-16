@@ -19,6 +19,7 @@ from code.estimation.theory_krr import TheoryKRR
 from code.restrictions import build_all_restrictions
 from code.baselines.linear import HistoricalMean, OLSModel, RidgeModel, LassoModel, ElasticNetModel
 from code.baselines.ensemble import RandomForestModel
+from code.config import TEST_MODE, TEST_MAX_ROLLING_WINDOWS
 
 
 def run_fast():
@@ -63,10 +64,15 @@ def run_fast():
     window_log = []
 
     # Use every-3-year rebalancing to reduce windows from 41 to ~14
+    max_windows = TEST_MAX_ROLLING_WINDOWS if TEST_MODE else None
+    if TEST_MODE:
+        print(f"[TEST_MODE] Limiting to {max_windows} rolling windows")
     for window_idx, (train_df, test_df) in enumerate(
         expanding_window_splits(panel, min_train=240, retrain_freq=36,
                                 start_oos=198301)
     ):
+        if max_windows is not None and window_idx >= max_windows:
+            break
         train_months = train_df['yyyymm'].unique()
         test_months = test_df['yyyymm'].unique()
         print(f"\n=== Window {window_idx}: train {train_months.min()}-{train_months.max()} "

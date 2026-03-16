@@ -1,9 +1,11 @@
 """
-Type C: Intermediary/institutional restrictions (#24-31).
+Type A: Intermediary/institutional restrictions (#24-31).
 
-Based on intermediary asset pricing models:
+Based on intermediary asset pricing models with linear SDFs:
 He-Krishnamurthy (2013), Adrian-Etula-Muir (2014),
 and sentiment-based restrictions.
+Formerly Type C (factor structure), now reclassified as Type A (Euler)
+since a linear factor model M = a + b*F is a linear SDF.
 """
 import numpy as np
 from .base import Restriction, RestrictionRegistry
@@ -14,7 +16,7 @@ class HKMCapitalRatio(Restriction):
     Higher capital ratio → lower risk premium → lower expected returns.
     """
     def __init__(self):
-        super().__init__('hkm_capital', 'intermediary', 'C',
+        super().__init__('hkm_capital', 'intermediary', 'A',
                          'HKM capital ratio predicts returns negatively')
 
     def penalty(self, f_hat, X, data_context):
@@ -53,7 +55,7 @@ class HKMFactorPricing(Restriction):
     Assets with higher beta to HKM factor earn higher returns.
     """
     def __init__(self):
-        super().__init__('hkm_factor', 'intermediary', 'C',
+        super().__init__('hkm_factor', 'intermediary', 'A',
                          'HKM factor beta prices cross-section')
 
     def penalty(self, f_hat, X, data_context):
@@ -97,7 +99,7 @@ class IntermediaryEuler(Restriction):
     E[M_I * R] = 1 where M_I depends on intermediary capital ratio.
     """
     def __init__(self, gamma: float = 5.0):
-        super().__init__('intermediary_euler', 'intermediary', 'C',
+        super().__init__('intermediary_euler', 'intermediary', 'A',
                          'Intermediary SDF Euler equation')
         self.gamma = gamma
 
@@ -136,7 +138,7 @@ class SentimentEffect(Restriction):
     High sentiment → low subsequent returns (overpricing correction).
     """
     def __init__(self):
-        super().__init__('sentiment_effect', 'intermediary', 'C',
+        super().__init__('sentiment_effect', 'intermediary', 'A',
                          'Sentiment negatively predicts returns')
 
     def penalty(self, f_hat, X, data_context):
@@ -175,7 +177,7 @@ class SentimentCrossSection(Restriction):
     Small, young, volatile stocks more affected by sentiment.
     """
     def __init__(self):
-        super().__init__('sentiment_xs', 'intermediary', 'C',
+        super().__init__('sentiment_xs', 'intermediary', 'A',
                          'Sentiment cross-sectional effect (size interaction)')
 
     def penalty(self, f_hat, X, data_context):
@@ -219,7 +221,7 @@ class LeverageCycle(Restriction):
     Broker-dealer leverage predicts returns.
     """
     def __init__(self):
-        super().__init__('leverage_cycle', 'intermediary', 'C',
+        super().__init__('leverage_cycle', 'intermediary', 'A',
                          'Leverage cycle return predictability')
 
     def penalty(self, f_hat, X, data_context):
@@ -261,7 +263,7 @@ class FundingLiquidity(Restriction):
     Tighter funding conditions → higher required returns.
     """
     def __init__(self):
-        super().__init__('funding_liquidity', 'intermediary', 'C',
+        super().__init__('funding_liquidity', 'intermediary', 'A',
                          'Funding liquidity constraint')
 
     def penalty(self, f_hat, X, data_context):
@@ -302,7 +304,7 @@ class InstitutionalOwnershipEffect(Restriction):
     Stocks with limited institutional participation are mispriced.
     """
     def __init__(self):
-        super().__init__('institutional_ownership', 'intermediary', 'C',
+        super().__init__('institutional_ownership', 'intermediary', 'A',
                          'Institutional ownership pricing effect')
 
     def penalty(self, f_hat, X, data_context):

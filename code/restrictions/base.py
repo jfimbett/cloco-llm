@@ -23,8 +23,8 @@ class Restriction(ABC):
         ----------
         name : unique identifier (e.g., 'euler_capm')
         family : restriction family ('consumption', 'production', etc.)
-        penalty_type : 'A' (Euler), 'B' (monotonicity/shape),
-                       'C' (factor structure), 'D' (equilibrium)
+        penalty_type : 'A' (Euler), 'B' (production FOC),
+                       'D' (demand equilibrium)
         description : human-readable description
         """
         self.name = name
@@ -96,7 +96,7 @@ class Restriction(ABC):
 
     def is_quadratic(self) -> bool:
         """Whether this penalty is quadratic in f̂ (can be solved in closed form)."""
-        return self.penalty_type in ('A', 'B', 'C')
+        return self.penalty_type in ('A', 'B')
 
     def __repr__(self):
         return f"Restriction('{self.name}', family='{self.family}', type='{self.penalty_type}')"
@@ -140,36 +140,3 @@ class RestrictionRegistry:
     def __repr__(self):
         return f"RestrictionRegistry({len(self)} restrictions, families={self.families()})"
 
-
-def adaptive_weights(
-    restrictions: list[Restriction],
-    f_krr: np.ndarray,
-    X: np.ndarray,
-    data_context: dict,
-    epsilon: float = 1e-8,
-) -> np.ndarray:
-    """
-    Compute adaptive within-group weights.
-
-    w_j = 1 / (C̃_j(f̂_KRR) + ε)
-
-    where C̃_j is the penalty of the unrestricted KRR estimate.
-    Restrictions that are already nearly satisfied get higher weight.
-
-    Parameters
-    ----------
-    restrictions : list of Restriction objects (within one group)
-    f_krr : predictions from unrestricted KRR
-    X : feature matrix
-    data_context : dict of data arrays
-    epsilon : regularization to avoid division by zero
-
-    Returns
-    -------
-    weights : (J,) array of adaptive weights, normalized to sum to 1
-    """
-    violations = np.array([
-        r.penalty(f_krr, X, data_context) for r in restrictions
-    ])
-    raw_weights = 1.0 / (violations + epsilon)
-    return raw_weights / raw_weights.sum()

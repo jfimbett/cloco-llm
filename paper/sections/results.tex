@@ -23,35 +23,6 @@ Section~\ref{sub:robustness} addresses sensitivity to implementation choices.
 Table~\ref{tab:oos_performance} reports out-of-sample predictive performance for all models estimated in Section~\ref{sec:empirical}.
 The evaluation metrics are the out-of-sample $R^2$ of Campbell and Thompson~(2008), the annualized Sharpe ratio of a long-short portfolio sorted on predicted returns, and the certainty-equivalent return (CER) for a mean-variance investor with relative risk aversion of five.
 
-\begin{table}[H]
-\centering
-\caption{Out-of-Sample Prediction Performance (Managed Portfolios)}
-\label{tab:oos_performance}
-\small
-\begin{tabular}{lcc}
-\toprule
-Model & $R^2_{\text{OOS}}$ (\%) & DM vs.\ Hist.\ Mean \\
-\midrule
-\multicolumn{3}{l}{\textit{Linear benchmarks}} \\
-Historical mean           & $-0.14$ & ---     \\
-OLS (all predictors)      & $32.05$ & $18.91$ \\
-Ridge regression          & $32.05$ & $18.91$ \\
-Lasso                     & $31.66$ & $19.00$ \\
-Elastic net               & $31.86$ & $18.97$ \\[4pt]
-\multicolumn{3}{l}{\textit{Nonlinear benchmarks}} \\
-Kernel ridge regression   & $27.86$ & $19.66$ \\
-Random forest             & $36.75$ & $18.85$ \\[4pt]
-\multicolumn{3}{l}{\textit{Theory-informed models}} \\
-Theory-KRR (all groups)   & $27.86$ & $19.66$ \\
-\bottomrule
-\end{tabular}
-\begin{minipage}{\textwidth}
-\vspace{4pt}
-\footnotesize
-\textit{Notes:} $R^2_{\text{OOS}}$ is defined as $1 - \sum_s (R_s - \hat{f}(\mathbf{X}_s))^2 / \sum_s (R_s - \bar{R})^2$, where $\bar{R}$ is the historical mean computed using only data available at the time of prediction. DM is the Diebold-Mariano test statistic for equal predictive accuracy relative to the historical mean, using Newey-West standard errors with 6 lags. The evaluation period is 1983--2023. All models use the same predictor set (7 managed-portfolio characteristics) and the same expanding-window estimation scheme with triennial rebalancing. These are preliminary results with fixed hyperparameters; cross-validated results with individually tuned $\bm{\mu}$ are forthcoming.
-\end{minipage}
-\end{table}
-
 At the managed-portfolio level, all models substantially outperform the historical mean, which achieves a negative $R^2_{\text{OOS}}$ of $-0.14$\%.
 Linear models (OLS, Ridge, Lasso, Elastic Net) cluster around $R^2_{\text{OOS}} \approx 32$\%, while Random Forest achieves the highest $R^2_{\text{OOS}}$ of $36.75$\%.
 Standard KRR achieves $27.86$\%, indicating that the Gaussian kernel captures nonlinear relationships but does not dominate tree-based methods at the managed-portfolio level.
@@ -75,34 +46,6 @@ For each group $g$, we report the average multiplier $\hat{\mu}_g = |\mathcal{G}
 
 Table~\ref{tab:theory_ranking} reports the group-level multipliers.
 
-\begin{table}[H]
-\centering
-\caption{Temporal Variation in Optimal Theory Family}
-\label{tab:theory_ranking}
-\small
-\begin{tabular}{llll}
-\toprule
-OOS Period & Best Theory Family & Top Restrictions & Val.\ MSE gain (\%) \\
-\midrule
-1983--1985  & All groups ($\mu = 0.1$)   & Realized vol, demand elasticity  & 0.030 \\
-1986--1988  & Demand systems             & Demand elasticity, substitution  & 0.017 \\
-1989--1991  & Macro-finance              & Term spread, default spread, EBP & 0.000 \\
-1992--1994  & Volatility                 & Realized volatility              & 0.066 \\
-1995--1997  & Consumption + Intermediary & Precautionary savings, $cay$, HKM capital  & 0.091 \\
-1998--2000  & Production                 & Investment, leverage, asset growth & 0.022 \\
-2001--2003  & Behavioral                 & Momentum, LT reversal, disposition & 0.041 \\
-2004--2006  & All groups ($\mu = 1.0$)   & Realized vol, precautionary savings & 0.005 \\
-2007--2009  & No production ($\mu = 0.1$) & Realized vol, $cay$, demand      & 0.016 \\
-2010--2012  & Macro-finance              & Term spread, default spread, EBP & 0.024 \\
-\bottomrule
-\end{tabular}
-\begin{minipage}{\textwidth}
-\vspace{4pt}
-\footnotesize
-\textit{Notes:} Each row reports the best-performing $\mu$ configuration for the indicated OOS period, selected by temporal validation on the last 24~months of the training set. Val.\ MSE gain is the percentage reduction in validation MSE relative to standard KRR ($\mu_j = 0$ for all $j$). The evaluation uses an expanding window with 240-month minimum training period and triennial rebalancing.
-\end{minipage}
-\end{table}
-
 The most striking feature of Table~\ref{tab:theory_ranking} is that \emph{no single theory family dominates across all periods}.
 Every one of the eight restriction families---consumption, production, intermediary, information, demand, volatility, behavioral, and macro-finance---wins or contributes to the winning configuration in at least one window.
 The optimal theory family rotates with economic conditions: demand-system restrictions of \citet{koijenyogo2019} help most in 1986--1988; volatility restrictions dominate in 1992--1994; consumption-based and intermediary restrictions jointly lead during 1995--1997; production-based restrictions (investment, leverage, asset growth) are optimal in 1998--2000; and behavioral restrictions (momentum, long-term reversal, disposition effect) are most valuable during the 2001--2003 dot-com bust.
@@ -113,9 +56,9 @@ During the post-crisis recovery (2010--2012), macro-finance restrictions (term s
 During the pre-crisis expansion (2004--2006), all theory families contribute modestly ($\mu = 1.0$ for all groups), suggesting that in calm markets the benefits of structural guidance are diffuse rather than concentrated in any single theory.
 
 Within the top-ranked configurations, individual restrictions exhibit substantial heterogeneity.
-Among consumption-based restrictions, the precautionary savings restriction and the $cay$ consumption-wealth ratio restriction of \citet{lettauludvigson2001} consistently receive the largest adaptive weights, while the basic power-utility CAPM Euler equation receives smaller weights---consistent with the view that the surplus-ratio and consumption-wealth channels capture distinct aspects of risk pricing that the simpler power-utility SDF misses.
+Among consumption-based restrictions, the precautionary savings restriction and the $cay$ consumption-wealth ratio restriction of \citet{lettauludvigson2001} appear to contribute most to predictive performance, while the basic power-utility CAPM Euler equation contributes less---consistent with the view that the surplus-ratio and consumption-wealth channels capture distinct aspects of risk pricing that the simpler power-utility SDF misses.
 Among intermediary restrictions, the capital ratio factor of \citet{hekrishnamurthy2013} receives large weights when the consumption-intermediary configuration is selected, while the funding liquidity restriction (proxied by the excess bond premium) contributes through the macro-finance group.
-These within-group differences motivate the hierarchical penalty structure in~\eqref{eq:hierarchical_penalties}, which allows cross-validation to shut down individual restrictions even when the group-level multiplier is positive.
+These within-group differences suggest that finer-grained penalty structures---allowing restriction-level multipliers rather than only group-level multipliers---may yield further predictive gains, a direction we leave for future work.
 
 The time variation in the optimal theory family supports the interpretation that different economic theories capture different sources of return predictability, and that the relative importance of these sources shifts with market conditions.
 This finding connects to \citet{Bryzgalova2023bayesian}, who document that the marginal value of pricing factors varies over time.
@@ -152,30 +95,6 @@ The periods where single-group configurations dominate (demand in 1986--1988, vo
 
 Table~\ref{tab:subsample} reports predictive performance across subperiods and market regimes.
 
-\begin{table}[H]
-\centering
-\caption{Theory-KRR Validation Improvement over KRR by Subperiod}
-\label{tab:subsample}
-\small
-\begin{tabular}{lccc}
-\toprule
-Subperiod & Windows & Avg.\ Val.\ MSE Gain (\%) & Best Theory Family \\
-\midrule
-Pre-2000 (1983--2000)  & 0--5  & 0.037 & Demand, Vol, Cons+Inter, Prod \\
-Post-2000 (2001--2012) & 6--9  & 0.022 & Behavioral, All, No-prod, Macro \\[4pt]
-Crisis windows         & 6, 8  & 0.029 & Behavioral (dot-com), No-prod (GFC) \\
-Non-crisis windows     & 0--5, 7, 9 & 0.029 & Varies by period \\[4pt]
-Early training ($<$300mo) & 0--1 & 0.024 & All groups, Demand \\
-Late training ($>$400mo)  & 5--9 & 0.022 & Prod, Behav, All, No-prod, Macro \\
-\bottomrule
-\end{tabular}
-\begin{minipage}{\textwidth}
-\vspace{4pt}
-\footnotesize
-\textit{Notes:} Val.\ MSE gain is the percentage reduction in validation MSE of the best Theory-KRR configuration relative to standard KRR. Crisis windows are those whose OOS period includes the dot-com bust (2001--2003) or the global financial crisis (2007--2009). Improvement is measured on the temporal validation set within each window before out-of-sample prediction.
-\end{minipage}
-\end{table}
-
 We expect theory-informed penalization to provide the largest improvement during crisis and small-sample periods, consistent with the transfer-learning intuition of \citet{Chen2026teaching}: economic theory acts as a form of pre-training that is most valuable when the statistical signal is weakest, either because the sample is small or because the data-generating process is far from its unconditional distribution.
 
 Table~\ref{tab:subsample} reports that during crisis episodes (the dot-com bust, the global financial crisis, and the COVID-19 crash), the $R^2_{\text{OOS}}$ gap between Theory-KRR and standard KRR widens relative to non-crisis periods.
@@ -194,8 +113,6 @@ For a manager entering a new market, working with a short sample, or operating d
 
 The subsample results in Section~\ref{sub:subsample} suggest that Theory-KRR reduces prediction error primarily through variance reduction.
 Figure~\ref{fig:bias_variance} formalizes this intuition by decomposing the mean squared prediction error into bias and variance components as the ratio of structural to statistical penalty varies.
-
-\textbf{[Figure 3 about here]}
 
 Figure~\ref{fig:bias_variance} plots total MSE, squared bias, and variance as a function of $\sum_j \mu_j / \lambda_{\mathrm{stat}}$, the ratio of aggregate structural penalty to statistical penalty.
 At the left end of the x-axis ($\sum_j \mu_j / \lambda_{\mathrm{stat}} \to 0$), Theory-KRR reduces to standard KRR: bias is low but variance is high because the estimator tracks noise in the training data.

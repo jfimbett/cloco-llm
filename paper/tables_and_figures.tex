@@ -1,0 +1,455 @@
+%!TEX root = main.tex
+%----------------------------------------------------------------------
+%  Tables and Figures
+%  Paper:   Theory-Informed Kernel Ridge Regression for Asset Pricing
+%  Authors: Amedeo Andriollo and Juan F. Imbet
+%----------------------------------------------------------------------
+
+\clearpage
+\setcounter{table}{0}
+\setcounter{figure}{0}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 1: Summary Statistics (from Section 5)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Summary Statistics}
+\label{tab:summary}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+ & $N$ & Mean & Std & P5 & P50 & P95 \\
+\midrule
+\multicolumn{7}{l}{\textit{Panel A: Monthly excess returns and firm characteristics}} \\
+Excess return (\%)          & 1,778,850 & 2.00  & 14.57 & $-18.29$ & 0.72  & 25.71 \\
+Book-to-market (rank)       & 1,593,893 & 0.500 & 0.289 & 0.050    & 0.500 & 0.950 \\
+Momentum 12m (rank)         & 1,637,232 & 0.500 & 0.289 & 0.050    & 0.500 & 0.950 \\
+Short-term reversal (rank)  & 1,767,293 & 0.500 & 0.289 & 0.050    & 0.500 & 0.950 \\
+Investment/capital (rank)   & 1,693,811 & 0.500 & 0.289 & 0.050    & 0.500 & 0.950 \\
+ROE (rank)                  & 1,694,592 & 0.500 & 0.289 & 0.050    & 0.500 & 0.950 \\
+Asset growth (rank)         & 1,663,548 & 0.500 & 0.289 & 0.050    & 0.500 & 0.950 \\
+Gross profitability (rank)  & 1,728,599 & 0.500 & 0.289 & 0.050    & 0.500 & 0.950 \\[4pt]
+\multicolumn{7}{l}{\textit{Panel B: Macroeconomic state variables}} \\
+ & $T$ & Mean & Std & & & AC(1) \\
+\cmidrule(lr){2-4} \cmidrule(lr){7-7}
+Market excess return        & 726 & 0.57  & 4.49  & & & 0.04 \\
+Risk-free rate (\%)         & 726 & 0.36  & 0.27  & & & 0.97 \\
+Term spread (\%)            & 726 & 1.46  & 1.26  & & & 0.96 \\
+Default spread (\%)         & 726 & 1.02  & 0.44  & & & 0.97 \\
+VIX                         & 408 & 19.66 & 7.56  & & & 0.81 \\
+Excess bond premium (\%)    & 726 & 3.08  & 2.05  & & & 0.97 \\
+Sentiment (BW)              & 702 & 0.00  & 1.00  & & & 0.99 \\
+Consumption growth (\%)     & 726 & 0.56  & 1.37  & & & $-0.47$ \\
+HKM capital ratio           & 648 & 0.060 & 0.023 & & & 0.98 \\
+$cay$                       & 726 & $-0.008$ & 0.039 & & & 0.99 \\[4pt]
+\multicolumn{7}{l}{\textit{Panel C: Sample coverage (avg.\ stocks per month by decade)}} \\
+1963--1969 & \multicolumn{2}{l}{1,425} & 1980--1989 & \multicolumn{2}{l}{2,750} & \\
+1970--1979 & \multicolumn{2}{l}{2,205} & 1990--1999 & \multicolumn{2}{l}{3,358} & \\
+2000--2009 & \multicolumn{2}{l}{2,645} & 2010--2023 & \multicolumn{2}{l}{2,168} & \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} Panel~A reports the distribution of monthly excess returns (\%) and selected cross-sectionally ranked firm characteristics (rank $\in [0,1]$) across all stock-month observations in the sample (July 1963--December 2023). Panel~B reports time-series summary statistics for macroeconomic state variables at monthly frequency; AC(1) is the first-order autocorrelation. VIX is available from 1990; HKM intermediary capital ratio from 1970; Baker-Wurgler sentiment from 1965. Panel~C reports the average number of stocks per month within each decade.
+\end{minipage}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 2: Consumption-Based Euler Equation Restrictions (from Section 3)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Consumption-Based Euler Equation Restrictions}
+\label{tab:euler}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & SDF / Penalty Form \\
+\midrule
+1 & Power utility (C-CAPM)
+  & \citep{breeden1979intertemporal,lucas1978asset}
+  & $M_{t+1} = \delta\left(\frac{C_{t+1}}{C_t}\right)^{-\gamma}$ \\[6pt]
+2 & Epstein--Zin recursive utility
+  & \citep{epsteinzin1989substitution}
+  & $M_{t+1} = \delta^\theta \left(\frac{C_{t+1}}{C_t}\right)^{-\theta/\psi} R_{m,t+1}^{\theta-1}$, \quad $\theta = \frac{1-\gamma}{1-1/\psi}$ \\[6pt]
+3 & External habit (surplus ratio)
+  & \citep{campbellcochrane1999}
+  & $M_{t+1} = \delta\left(\frac{S_{t+1}}{S_t}\right)^{-\gamma}\left(\frac{C_{t+1}}{C_t}\right)^{-\gamma}$, \quad $S_t = \frac{C_t - H_t}{C_t}$ \\[6pt]
+4 & Internal habit (difference)
+  & \citep{constantinides1990habit}
+  & $M_{t+1} = \delta\,\frac{(C_{t+1} - bC_t)^{-\gamma}}{(C_t - bC_{t-1})^{-\gamma}}$ \\[6pt]
+5 & Internal habit (ratio)
+  & \citep{abel1990asset}
+  & $M_{t+1} = \delta\,\frac{(C_{t+1}/C_t^b)^{-\gamma}}{(C_t/C_{t-1}^b)^{-\gamma}}$ \\[6pt]
+6 & Long-run risk
+  & \citep{bansalyaron2004}
+  & $M_{t+1}$ under Epstein--Zin with $\Delta c_{t+1} = \mu + x_t + \sigma_t \eta_{t+1}$; $x_t$ persistent, $\sigma_t^2$ stochastic \\[6pt]
+7 & Long-run risk with jumps
+  & \citep{drechsleryaron2011}
+  & Adds compound Poisson jumps in $\sigma_t^2$ to the Bansal--Yaron SDF \\[6pt]
+8 & Rare disaster (constant intensity)
+  & \citep{barro2006rare,gabaix2012variable}
+  & $M_{t+1}$ includes disaster probability $p$ and contraction size $b$: $M_{t+1} \propto (1 - p + p \cdot b^{-\gamma})$ \\[6pt]
+9 & Variable rare disaster
+  & \citep{wachter2013disaster}
+  & Time-varying disaster intensity $\lambda_t$ following a Cox process; $M_{t+1}$ depends on $\lambda_t, \lambda_{t+1}$ \\[6pt]
+10 & Precautionary savings (prudence)
+  & \citep{kimball1990precautionary,leland1968saving}
+  & $M_{t+1} \approx \delta(C_{t+1}/C_t)^{-\gamma}[1 + \frac{\gamma+1}{2}\sigma^2_{c,t}]$; prudence terms \\[6pt]
+11 & Durable consumption
+  & \citep{yogo2006durable}
+  & Epstein--Zin with nondurable and durable consumption; $M_{t+1}$ depends on $(C_{t+1}/C_t)$, $(D_{t+1}/D_t)$, and $R_{m,t+1}$ \\[6pt]
+12 & Heterogeneous agents
+  & \citep{constantinidesduffie1996}
+  & $M_{t+1} = \delta(C_{t+1}/C_t)^{-\gamma} \exp[-\frac{\gamma(\gamma+1)}{2}\sigma^2_{\text{cross}}]$; $\sigma^2_{\text{cross}}$ = cross-sectional cons.\ variance \\[6pt]
+13 & Nonparametric Euler
+  & \citep{escanciano2016nonparametric}
+  & $M_{t+1} = g(C_{t+1}/C_t)$ with $g$ unknown, identified nonparametrically from Euler equation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 3: Production-Based and Investment Restrictions (from Section 3)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Production-Based and Investment Restrictions}
+\label{tab:production}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.5cm} X}
+\toprule
+\# & Restriction & Source & Explicit Penalty Form \\
+\midrule
+14 & Investment CAPM
+   & \citep{cochrane1991production,liuwhitedzhang2009}
+   & $C_{14}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1 (I/K)_s - \hat{a}_2\,\mathrm{ROE}_s\bigr)^2$ \\[6pt]
+15 & $q$-theory factor model
+   & \citep{houxuezhang2015}
+   & $C_{15}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1 (I/K)_s - \hat{a}_2\,\mathrm{ROE}_s - \hat{a}_3\,\mathrm{EG}_s\bigr)^2$ \\[6pt]
+16 & Convex adjustment costs
+   & \citep{hayashi1982tobin}
+   & $C_{16}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{\phi}_1 (I/K)_s - \hat{\phi}_2 (I/K)_s^2\bigr)^2$ \\[6pt]
+17 & Nonconvex adjustment costs
+   & \citep{abeleberly1996,cooperhaltiwanger2006}
+   & $C_{17}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_1 (I/K)_s - \hat{a}_2\,\ind_{\{|I/K|>h\}}\bigr)^2$ \\[6pt]
+18 & Irreversibility
+   & \citep{abeleberly1996,zhang2005value}
+   & $C_{18}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_1 (I/K)_s - \hat{a}_2\,\ind_{\{I<0\}}\bigr)^2$ \\[6pt]
+19 & Financial constraints (collateral)
+   & \citep{kiyotakimoore1997}
+   & $C_{19}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1 (I/K)_s - \hat{a}_2 (K/\text{debt})_s\bigr)^2$ \\[6pt]
+20 & Financial constraints (equity)
+   & \citep{hennessywhited2005}
+   & $C_{20}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1 (I/K)_s - \hat{a}_2\,\mathrm{Lev}_s - \hat{a}_3\,\mathrm{CF}_s\bigr)^2$ \\[6pt]
+21 & Costly external finance
+   & \citep{livdansaprizazhang2009}
+   & $C_{21}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1 (I/K)_s - \hat{a}_2\,\mathrm{Lev}_s - \hat{a}_3\,\mathrm{Div}_s\bigr)^2$ \\[6pt]
+22 & Labor-augmented
+   & \citep{belolinbazdresch2014}
+   & $C_{22}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1 (I/K)_s - \hat{a}_2\,\mathrm{HN}_s\bigr)^2$ \\[6pt]
+23 & Intangible capital
+   & \citep{eisfeldtpapanikolaou2013}
+   & $C_{23}(f) = \frac{1}{n}\sum_s \bigl(f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1 (I/K)_s - \hat{a}_2 (\text{R\&D}/K)_s - \hat{a}_3 (\text{SGA}/K)_s\bigr)^2$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 4: Intermediary and Institutional Restrictions (from Section 3)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Intermediary and Institutional Restrictions}
+\label{tab:intermediary}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.5cm} X}
+\toprule
+\# & Restriction & Source & SDF / Penalty Form \\
+\midrule
+24 & Intermediary capital ratio
+   & \citep{hekrishnamurthy2013}
+   & $M_{24,t+1} = \hat{a}_{24} + \hat{b}_{24}\,\eta_{t+1}$; \quad $C_{24}(f) = \sum_t \bigl(\frac{1}{N}\sum_i M_{24,t+1}(f(\mathbf{X}_{i,t}) + R_t^f) - 1\bigr)^2$ \\[6pt]
+25 & Intermediary leverage
+   & \citep{adrianetulamuir2014}
+   & $M_{25,t+1} = \hat{a}_{25} + \hat{b}_{25}\,\Delta\mathrm{Lev}_{t+1}$; same Euler penalty form \\[6pt]
+26 & Funding liquidity
+   & \citep{brunnermeier2009}
+   & $M_{26,t+1} = \hat{a}_{26} + \hat{b}_{26}\,\mathrm{TED}_{t+1}$; margin spirals amplify funding shocks \\[6pt]
+27 & Dealer balance sheet
+   & \citep{hekellymanela2017}
+   & $M_{27,t+1} = \hat{a}_{27} + \hat{b}_{27}\,\eta^{\mathrm{PD}}_{t+1}$; primary dealer equity capital ratio \\[6pt]
+28 & Limits to arbitrage
+   & \citep{delong1990noise}
+   & $M_{28,t+1} = \hat{a}_{28} + \hat{b}_{28}\,\mathrm{Sent}_{t+1}$; noise-trader sentiment as SDF factor \\[6pt]
+29 & Slow-moving capital
+   & \citep{duffie2010slow}
+   & $M_{29,t+1} = \hat{a}_{29} + \hat{b}_{29}\,\mathrm{Flow}_{t+1}$; capital flow proxy \\[6pt]
+30 & Margin CAPM
+   & \citep{garleanupedersen2011}
+   & $M_{30,t+1} = \hat{a}_{30} + \hat{b}_{30}^m R_{m,t+1} + \hat{b}_{30}^{\psi}\,\psi_{t+1}$; margin requirement factor \\[6pt]
+31 & Leverage constraints
+   & \citep{frazzinipedersen2014}
+   & $M_{31,t+1} = \hat{a}_{31} + \hat{b}_{31}\,\mathrm{BAB}_{t+1}$; betting-against-beta factor \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 5: Information and Learning Restrictions (from Section 3)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Information and Learning Restrictions}
+\label{tab:information}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.5cm} X}
+\toprule
+\# & Restriction & Source & SDF / Penalty Form \\
+\midrule
+32 & Bayesian learning about growth
+   & \citep{pastorveronesi2009}
+   & $M_{32,t+1}$ depends on posterior mean $\hat{\mu}_t$ and variance $\hat{\sigma}^2_t$ of long-run growth; $C_{32}(f) = \sum_t (\frac{1}{N}\sum_i M_{32,t+1}(f(\mathbf{X}_{i,t}) + R_t^f) - 1)^2$ \\[6pt]
+33 & Learning about regime
+   & \citep{david2008heterogeneous,veronesi1999}
+   & $M_{33,t+1}$ depends on regime probability $\pi_t = P(\text{good} \mid \Fcal_t)$; belief updates amplify volatility \\[6pt]
+34 & Parameter uncertainty
+   & \citep{johanneskorteweg2014}
+   & $M_{34,t+1} = \int M(\theta) \, dP(\theta \mid \Fcal_t)$; predictive variance enters pricing \\[6pt]
+35 & Ambiguity aversion
+   & \citep{epsteinschneider2008,ilutschneider2014}
+   & $M_{35,t+1} = \min_{P \in \mathcal{P}} dP/dP_0$; worst-case density ratio as SDF \\[6pt]
+36 & Disagreement
+   & \citep{basak2005asset,xiongyan2010}
+   & $M_{36,t+1} = \hat{a}_{36} + \hat{b}_{36}\,\mathrm{Disp}_{t+1}$; belief dispersion as linear SDF factor \\[6pt]
+37 & Rational inattention
+   & \citep{mackowiak2009optimal,vannieuwerburgh2010information}
+   & $M_{37,t+1} = \hat{a}_{37} + \hat{b}_{37}\,\mathrm{InfoFlow}_{t+1}$; information capacity as linear SDF factor \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 6: Demand-System and Market Microstructure Restrictions (from Section 3)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Demand-System and Market Microstructure Restrictions}
+\label{tab:demand}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.5cm} X}
+\toprule
+\# & Restriction & Source & SDF / Penalty Form \\
+\midrule
+38 & Market clearing
+   & \citep{koijenyogo2019}
+   & $C_{38}(f) = \sum_t \|\sum_i w_i D_i(\hat{\mathbf{f}}_t) - \mathbf{S}_t\|^2$; aggregate demand = supply \\[6pt]
+39 & Portfolio choice FOC
+   & \citep{koijenrichmondyogo2024}
+   & $C_{39}(f) = \sum_t \|\sum_i w_i D_i^{\mathrm{FOC}}(\hat{\mathbf{f}}_t, \mathbf{X}_t) - \mathbf{S}_t\|^2$; characteristic-based elasticities \\[6pt]
+40 & Inelastic markets
+   & \citep{gabaixkoijen2021}
+   & $C_{40}(f) = \sum_t \|\hat{\epsilon}^{-1}\,\Delta\mathrm{Flow}_t - \Delta\hat{\mathbf{f}}_t\|^2$; flow-driven price impact \\[6pt]
+41 & Search frictions OTC
+   & \citep{duffiegarleanupedersen2005}
+   & $C_{41}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,\lambda_s - \hat{a}_2\,\beta^{\mathrm{barg}}_s)^2$ \\[6pt]
+42 & Fire sale externalities
+   & \citep{shleifervishny1992}
+   & $M_{42,t+1} = \hat{a}_{42} + \hat{b}_{42}\,\mathrm{FSP}_{t+1}$; fire-sale pressure as linear SDF \\[6pt]
+43 & Short-sale constraints
+   & \citep{miller1977risk,hongstein2003}
+   & $C_{43}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,\mathrm{SI}_s - \hat{a}_2\,\mathrm{Disp}_s)^2$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 7: Variance and Volatility Restrictions (from Section 3)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Variance and Volatility Restrictions}
+\label{tab:options}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.5cm} X}
+\toprule
+\# & Restriction & Source & Explicit Penalty Form \\
+\midrule
+44 & Variance risk premium
+   & \citep{bollerslevtauchenzhou2009}
+   & $C_{44}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,\mathrm{VRP}_{t(s)})^2$; $\mathrm{VRP}_t = \mathrm{IV}_t^2 - \hat{\E}_t[\mathrm{RV}_{t+1}]$ \\[6pt]
+45 & Stochastic volatility
+   & \citep{heston1993}
+   & $C_{45}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,V_{t(s)})^2$; $V_t$ = conditional variance proxy (VIX$^2$) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 8: Behavioral and Sentiment Restrictions (from Section 3)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Behavioral and Sentiment Restrictions}
+\label{tab:behavioral}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.5cm} X}
+\toprule
+\# & Restriction & Source & SDF / Penalty Form \\
+\midrule
+46 & Prospect theory
+   & \citep{barberishuangsantos2001}
+   & $M_{46,t+1} = \delta(C_{t+1}/C_t)^{-\gamma}[1 + \hat{\lambda}\,\max(0, -R_{m,t+1})/R_{m,t}]$; loss aversion kink \\[6pt]
+47 & Overconfidence
+   & \citep{danielhirshleifer1998}
+   & $C_{47}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,\mathrm{Mom}_s - \hat{a}_2\,\mathrm{Rev}_s)^2$ \\[6pt]
+48 & Disposition effect
+   & \citep{frazzini2006disposition}
+   & $C_{48}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,\mathrm{CGO}_s)^2$ \\[6pt]
+49 & Extrapolative expectations
+   & \citep{barberis2018extrapolation}
+   & $C_{49}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,\bar{R}^{\text{past}}_s)^2$ \\[6pt]
+50 & Investor sentiment
+   & \citep{bakerwurgler2006}
+   & $M_{50,t+1} = \hat{a}_{50} + \hat{b}_{50}\,\mathrm{Sent}_{t+1}$; high sentiment predicts low returns for speculative stocks \\[6pt]
+51 & Salience theory
+   & \citep{bordalo2012salience}
+   & $C_{51}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,\mathrm{Sal}_s)^2$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 9: Macro-Finance and Term Structure Restrictions (from Section 3)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Macro-Finance and Term Structure Restrictions}
+\label{tab:macro}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}p{2.5cm} X}
+\toprule
+\# & Restriction & Source & SDF / Penalty Form \\
+\midrule
+52 & Affine term structure
+   & \citep{duffiekan1996,angpiazzesi2003}
+   & $C_{52}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{\mathbf{a}}^\top \mathbf{y}_{t(s)})^2$; yield curve state $\mathbf{y}_t$ \\[6pt]
+53 & Inflation risk premium
+   & \citep{bekaertengstrom2010}
+   & $M_{53,t+1} = \hat{a}_{53} + \hat{b}_{53}\,\mathrm{IRP}_{t+1}$; inflation risk premium as linear SDF factor \\[6pt]
+54 & Monetary policy
+   & \citep{bernankekuttner2005}
+   & $C_{54}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,\Delta i^{\text{surp}}_{t(s)})^2$ \\[6pt]
+55 & Consumption-wealth ratio
+   & \citep{lettauludvigson2001}
+   & $C_{55}(f) = \frac{1}{n}\sum_s (f(\mathbf{X}_s) - \hat{a}_0 - \hat{a}_1\,cay_{t(s)})^2$ \\[6pt]
+56 & Credit spread / EBP
+   & \citep{gilchristzakrajsek2012}
+   & $M_{56,t+1} = \hat{a}_{56} + \hat{b}_{56}\,\mathrm{EBP}_{t+1}$; excess bond premium as linear SDF factor \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 10: Out-of-Sample Prediction Performance (from Section 6)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Out-of-Sample Prediction Performance (Managed Portfolios)}
+\label{tab:oos_performance}
+\small
+\begin{tabular}{lcc}
+\toprule
+Model & $R^2_{\text{OOS}}$ (\%) & DM vs.\ Hist.\ Mean \\
+\midrule
+\multicolumn{3}{l}{\textit{Linear benchmarks}} \\
+Historical mean           & $-0.14$ & ---     \\
+OLS (all predictors)      & $32.05$ & $18.91$ \\
+Ridge regression          & $32.05$ & $18.91$ \\
+Lasso                     & $31.66$ & $19.00$ \\
+Elastic net               & $31.86$ & $18.97$ \\[4pt]
+\multicolumn{3}{l}{\textit{Nonlinear benchmarks}} \\
+Kernel ridge regression   & $27.86$ & $19.66$ \\
+Random forest             & $36.75$ & $18.85$ \\[4pt]
+\multicolumn{3}{l}{\textit{Theory-informed models}} \\
+Theory-KRR (all groups)   & $27.86$ & $19.66$ \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} $R^2_{\text{OOS}}$ is defined as $1 - \sum_s (R_s - \hat{f}(\mathbf{X}_s))^2 / \sum_s (R_s - \bar{R})^2$, where $\bar{R}$ is the historical mean computed using only data available at the time of prediction. DM is the Diebold-Mariano test statistic for equal predictive accuracy relative to the historical mean, using Newey-West standard errors with 6 lags. The evaluation period is 1983--2023. All models use the same predictor set (7 managed-portfolio characteristics) and the same expanding-window estimation scheme with triennial rebalancing. These are preliminary results with fixed hyperparameters; cross-validated results with individually tuned $\bm{\mu}$ are forthcoming.
+\end{minipage}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 11: Temporal Variation in Optimal Theory Family (from Section 6)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Temporal Variation in Optimal Theory Family}
+\label{tab:theory_ranking}
+\small
+\begin{tabular}{llll}
+\toprule
+OOS Period & Best Theory Family & Top Restrictions & Val.\ MSE gain (\%) \\
+\midrule
+1983--1985  & All groups ($\mu = 0.1$)   & Realized vol, demand elasticity  & 0.030 \\
+1986--1988  & Demand systems             & Demand elasticity, substitution  & 0.017 \\
+1989--1991  & Macro-finance              & Term spread, default spread, EBP & 0.000 \\
+1992--1994  & Volatility                 & Realized volatility              & 0.066 \\
+1995--1997  & Consumption + Intermediary & Precautionary savings, $cay$, HKM capital  & 0.091 \\
+1998--2000  & Production                 & Investment, leverage, asset growth & 0.022 \\
+2001--2003  & Behavioral                 & Momentum, LT reversal, disposition & 0.041 \\
+2004--2006  & All groups ($\mu = 1.0$)   & Realized vol, precautionary savings & 0.005 \\
+2007--2009  & No production ($\mu = 0.1$) & Realized vol, $cay$, demand      & 0.016 \\
+2010--2012  & Macro-finance              & Term spread, default spread, EBP & 0.024 \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} Each row reports the best-performing $\mu$ configuration for the indicated OOS period, selected by temporal validation on the last 24~months of the training set. Val.\ MSE gain is the percentage reduction in validation MSE relative to standard KRR ($\mu_j = 0$ for all $j$). The evaluation uses an expanding window with 240-month minimum training period and triennial rebalancing.
+\end{minipage}
+\end{table}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Table 12: Theory-KRR Validation Improvement by Subperiod (from Section 6)
+% ══════════════════════════════════════════════════════════════════════
+
+\begin{table}[h!]
+\centering
+\caption{Theory-KRR Validation Improvement over KRR by Subperiod}
+\label{tab:subsample}
+\small
+\begin{tabular}{lccc}
+\toprule
+Subperiod & Windows & Avg.\ Val.\ MSE Gain (\%) & Best Theory Family \\
+\midrule
+Pre-2000 (1983--2000)  & 0--5  & 0.037 & Demand, Vol, Cons+Inter, Prod \\
+Post-2000 (2001--2012) & 6--9  & 0.022 & Behavioral, All, No-prod, Macro \\[4pt]
+Crisis windows         & 6, 8  & 0.029 & Behavioral (dot-com), No-prod (GFC) \\
+Non-crisis windows     & 0--5, 7, 9 & 0.029 & Varies by period \\[4pt]
+Early training ($<$300mo) & 0--1 & 0.024 & All groups, Demand \\
+Late training ($>$400mo)  & 5--9 & 0.022 & Prod, Behav, All, No-prod, Macro \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} Val.\ MSE gain is the percentage reduction in validation MSE of the best Theory-KRR configuration relative to standard KRR. Crisis windows are those whose OOS period includes the dot-com bust (2001--2003) or the global financial crisis (2007--2009). Improvement is measured on the temporal validation set within each window before out-of-sample prediction.
+\end{minipage}
+\end{table}

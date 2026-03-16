@@ -11,11 +11,11 @@
 This section develops the econometric framework.
 Section~\ref{sub:setup} introduces notation and the prediction environment.
 Section~\ref{sub:estimator} defines the theory-informed KRR objective.
-Sections~\ref{sub:penalties}--\ref{sub:finite_dim} formalize the structural penalty types
+Sections~\ref{sub:penalties}--\ref{sub:finite_dim} formalize the three structural penalty types
 and establish the representer theorem and finite-dimensional reduction that
 make the estimator computationally tractable.
-Section~\ref{sub:nesting} shows that the framework nests several influential
-estimators as special cases.
+Section~\ref{sub:nesting} shows that the framework nests standard KRR
+and constrained GMM as special cases.
 Sections~\ref{sub:cv}--\ref{sub:inference} address implementation, misspecification
 robustness, and inference.
 
@@ -122,7 +122,7 @@ predictive accuracy (Section~\ref{sub:cv}).
 \label{sub:penalties}
 %======================================================================
 
-We formalize four classes of structural penalties.
+We formalize three classes of structural penalties.
 Each encodes restrictions from a distinct family of asset-pricing models.
 A key requirement---verified explicitly below---is that every $C_j(f)$
 depends on $f$ only through its evaluations at the observed data points
@@ -166,9 +166,17 @@ Since $M_j(\hat{\theta}_j, \mathbf{X}_t, \mathbf{X}_{t+1})$ and $R_t^f$ are data
 the penalty depends on $f$ only through $\{f(\mathbf{X}_{i,t})\}_{i,t}$.
 
 \begin{remark}[Coverage]
-Type~A penalties accommodate consumption-based models (CCAPM, long-run risk,
-rare disasters, habit formation), as well as production-based SDFs derived
-from firms' intertemporal optimality conditions.
+Type~A penalties accommodate any model that specifies an SDF $M_{j,t+1}$.
+This includes consumption-based models (CCAPM, long-run risk,
+rare disasters, habit formation), intermediary-based models where the SDF
+is linear in a factor $F_{j,t}$ (i.e., $M_{j,t+1} = a_j + b_j F_{j,t+1}$,
+as in \citealp{hekrishnamurthy2013} and \citealp{adrianetulamuir2014}),
+information and learning models, and behavioral models that specify
+a modified pricing kernel.
+A linear factor model $M_{t+1} = 1 - \mathbf{b}^\top(\mathbf{F}_{t+1} - \E[\mathbf{F}])$
+is a linear SDF, so any factor-based restriction reduces to a Type~A
+Euler equation penalty without requiring pre-estimated betas---only
+the factor time series $F_{j,t}$ is needed.
 Each distinct SDF specification generates a separate penalty $C_j^{\mathrm{Euler}}$.
 \end{remark}
 
@@ -208,49 +216,6 @@ When $g_j$ encodes the first-order condition from the investment CAPM
 or the $q$-factor model,
 Type~B penalties embed the production approach
 to asset pricing directly into the nonparametric objective.
-\end{remark}
-
-%----------------------------------------------------------------------
-\subsubsection{Type~C: Factor Structure Penalties}
-\label{sub:factor}
-%----------------------------------------------------------------------
-
-Factor models impose that expected returns obey a linear pricing
-relation with respect to exposure to priced factors.
-Let model $j$ specify a factor $F_{j,t}$ (e.g., an intermediary capital
-ratio factor, market excess return, or a latent factor).
-Let $\beta_{i,j}$ denote asset $i$'s loading on $F_{j,t}$,
-pre-estimated by time-series regression, and let $\alpha_{i,j}$
-be the corresponding intercept.
-
-\begin{definition}[Factor structure penalty]
-\label{def:factor_penalty}
-For factor model $j$ with estimated loadings
-$\hat{\beta}_{i,j}$, $\hat{\alpha}_{i,j}$ ($i=1,\ldots,N$)
-and factor realizations $F_{j,t}$ ($t=1,\ldots,T$), define
-\begin{equation}
-\label{eq:factor_penalty}
-C_j^{\mathrm{factor}}(f) \;=\;
-\frac{1}{n}\sum_{i=1}^{N}\sum_{t=1}^{T}
-\bigl(
-f(\mathbf{X}_{i,t}) - \hat{\beta}_{i,j}\, F_{j,t} - \hat{\alpha}_{i,j}
-\bigr)^2.
-\end{equation}
-\end{definition}
-
-\noindent
-When asset pricing restricts $\hat{\alpha}_{i,j} = 0$ for all $i$
-(exact factor pricing), the penalty reduces to
-$\frac{1}{n}\sum_{i,t}(f(\mathbf{X}_{i,t}) - \hat{\beta}_{i,j}\, F_{j,t})^2$,
-penalizing deviations from the factor model's predictions of expected returns.
-Again, the penalty depends on $f$ only through $\{f(\mathbf{X}_{i,t})\}_{i,t}$.
-
-\begin{remark}[Intermediary asset pricing]
-When $F_{j,t}$ is the intermediary capital ratio or the intermediary leverage factor,
-Type~C penalties embed intermediary-based
-models into the nonparametric estimator.
-This is particularly valuable when the intermediary model captures
-time-variation in risk premia that firm-level characteristics alone cannot.
 \end{remark}
 
 %----------------------------------------------------------------------
@@ -333,9 +298,9 @@ for some $\hat{\boldsymbol{\alpha}} = (\hat{\alpha}_1, \ldots, \hat{\alpha}_n)^\
 \emph{The proof is given in Appendix~\ref{app:proofs}.}
 \end{proof}
 
-\begin{remark}[Verification for Types~A--D]
+\begin{remark}[Verification for Types~A, B, and~D]
 \label{rem:verify_representer}
-The condition~\eqref{eq:penalty_eval} holds for all four penalty types:
+The condition~\eqref{eq:penalty_eval} holds for all three penalty types:
 \begin{enumerate}[label=(\alph*)]
 \item \emph{Type~A (Euler):}
   $C_j^{\mathrm{Euler}}(f)$ depends on $f$ through
@@ -345,9 +310,6 @@ The condition~\eqref{eq:penalty_eval} holds for all four penalty types:
 \item \emph{Type~B (Production):}
   $C_j^{\mathrm{prod}}(f)$ is explicitly a function of
   $\{f(\mathbf{X}_s)\}_{s}$ and data $\{g_j(\mathbf{Z}_s^{(j)})\}_s$.
-\item \emph{Type~C (Factor):}
-  $C_j^{\mathrm{factor}}(f)$ involves $\{f(\mathbf{X}_{i,t})\}_{i,t}$
-  and pre-estimated $\hat{\beta}_{i,j}$, $\hat{\alpha}_{i,j}$, $F_{j,t}$.
 \item \emph{Type~D (Demand):}
   $C_j^{\mathrm{demand}}(f)$ depends on $f$ through
   $\hat{\mathbf{f}}_t = (f(\mathbf{X}_{1,t}), \ldots, f(\mathbf{X}_{N,t}))^\top$.
@@ -356,6 +318,29 @@ In each case, the penalty is a function of the $n$-dimensional evaluation
 vector, so Proposition~\ref{prop:representer} applies.
 This extends classical representer theorems to accommodate theory-informed
 structural penalties.
+\end{remark}
+
+\begin{remark}[Evaluation-dependence and variable coverage]
+\label{rem:evaluation_dependence}
+A key feature of the penalty structure is that each $C_j(f)$ constrains
+$f$ only through its evaluations at the observed data points
+$\{f(\mathbf{X}_s)\}_{s=1}^n$.
+This has an important implication for the interpretation of penalties
+that involve only a subset of the characteristic vector $\mathbf{X}$.
+Consider a production-based penalty $C_j^{\mathrm{prod}}(f)$ that depends
+on investment-to-capital ratio $(I/K)$ and return on equity $(\mathrm{ROE})$
+but not on consumption growth.
+This penalty does \emph{not} impose a zero restriction on $f$'s dependence
+on consumption---it is simply silent about consumption.
+The penalty penalizes deviations of $f(\mathbf{X}_s)$ from the production
+model's prediction $g_j(\mathbf{Z}_s^{(j)})$ at each observed point,
+but it leaves $f$ free to depend on any variable in $\mathbf{X}$
+to match those targets.
+More generally, each $C_j$ constrains $f$ along specific dimensions
+of the characteristic space while leaving other dimensions unrestricted.
+The combined penalty $\sum_j \mu_j C_j(f)$ achieves broad coverage
+by assembling restrictions from different models, each constraining
+different dimensions of $\mathbf{X}$.
 \end{remark}
 
 %======================================================================
@@ -433,18 +418,9 @@ C_j^{\mathrm{prod}}(f) =
 \frac{1}{n}\|\mathbf{K}\boldsymbol{\alpha} - \mathbf{g}_j\|^2.
 \end{equation}
 
-For Type~C penalties, let $\mathbf{h}_j \in \mathbb{R}^n$ with
-$[\mathbf{h}_j]_s = \hat{\beta}_{i,j}\, F_{j,t} + \hat{\alpha}_{i,j}$
-where $s = (i,t)$.  Then
-\begin{equation}
-\label{eq:factor_quad}
-C_j^{\mathrm{factor}}(f) =
-\frac{1}{n}\|\mathbf{K}\boldsymbol{\alpha} - \mathbf{h}_j\|^2.
-\end{equation}
-
 \begin{proposition}[First-order conditions]
 \label{prop:foc}
-Suppose every active penalty ($\mu_j > 0$) is of Type~A, B, or C
+Suppose every active penalty ($\mu_j > 0$) is of Type~A or~B
 (or more generally, quadratic in $\hat{\mathbf{f}}$).
 Define the aggregated penalty matrix
 \begin{equation}
@@ -452,20 +428,16 @@ Define the aggregated penalty matrix
 \boldsymbol{\Omega} \;=\;
 \sum_{j \in \mathcal{J}^A} \mu_j\, \mathbf{A}_j^\top \mathbf{A}_j
 \;+\;
-\sum_{j \in \mathcal{J}^B} \frac{\mu_j}{n}\, \mathbf{I}_n
-\;+\;
-\sum_{j \in \mathcal{J}^C} \frac{\mu_j}{n}\, \mathbf{I}_n,
+\sum_{j \in \mathcal{J}^B} \frac{\mu_j}{n}\, \mathbf{I}_n,
 \end{equation}
-where $\mathcal{J}^A$, $\mathcal{J}^B$, $\mathcal{J}^C$ index
-Type~A, B, and C penalties respectively, and the aggregated target vector
+where $\mathcal{J}^A$ and $\mathcal{J}^B$ index
+Type~A and B penalties respectively, and the aggregated target vector
 \begin{equation}
 \label{eq:omega_vec}
 \boldsymbol{\omega} \;=\;
 \sum_{j \in \mathcal{J}^A} \mu_j\, \mathbf{A}_j^\top \mathbf{b}_j
 \;+\;
-\sum_{j \in \mathcal{J}^B} \frac{\mu_j}{n}\, \mathbf{g}_j
-\;+\;
-\sum_{j \in \mathcal{J}^C} \frac{\mu_j}{n}\, \mathbf{h}_j.
+\sum_{j \in \mathcal{J}^B} \frac{\mu_j}{n}\, \mathbf{g}_j.
 \end{equation}
 Then the first-order conditions for~\eqref{eq:finite_dim} are
 \begin{equation}
@@ -527,11 +499,8 @@ provides a useful warm start.
 \label{sub:nesting}
 %======================================================================
 
-A key advantage of the framework is that it nests several influential
-estimators as special or limiting cases.
-This both clarifies the relationship between existing methods and
-suggests that the theory-informed KRR estimator can weakly dominate
-each special case.
+The framework nests two important special cases, clarifying
+the relationship between theory-informed KRR and existing methods.
 
 \begin{proposition}[Nesting]
 \label{prop:nesting}
@@ -558,44 +527,6 @@ The theory-informed KRR estimator~\eqref{eq:tikrr} nests the following:
   which is a nonparametric generalization of GMM-based SDF estimation.
   When $\mathcal{H}$ is restricted to parametric functions,
   this recovers classical GMM.
-
-\item \textbf{Approximate instrumented PCA.}
-  Consider a linear kernel $k(\mathbf{x}, \mathbf{x}') = \mathbf{x}^\top \mathbf{x}'$
-  so that $f(\mathbf{X}_{i,t}) = \boldsymbol{\beta}^\top \mathbf{X}_{i,t}$
-  for some $\boldsymbol{\beta} \in \mathbb{R}^p$, and a Type~C penalty
-  where the factor $F_{j,t}$ is a target-PCA factor.
-  Then~\eqref{eq:tikrr} becomes
-  \begin{equation}
-  \label{eq:ipca_nest}
-  \hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}}
-  \frac{1}{n}\sum_{i,t}(R_{i,t+1} - \boldsymbol{\beta}^\top \mathbf{X}_{i,t})^2
-  + \lambda_{\mathrm{stat}}\|\boldsymbol{\beta}\|^2
-  + \mu_j \frac{1}{n}\sum_{i,t}
-    (\boldsymbol{\beta}^\top \mathbf{X}_{i,t}
-     - \hat{\beta}_{i,j} F_{j,t})^2,
-  \end{equation}
-  a ridge regression with an additional penalty encouraging alignment
-  with the target-PCA factor structure.
-  This approximates the cross-sectional
-  and time-series restrictions in instrumented PCA methods.
-
-\item \textbf{Text-informed penalized regression.}
-  Replacing $\mathcal{H}$ with a finite-dimensional linear space
-  $\mathbb{R}^p$, substituting the RKHS-norm penalty with an
-  $\ell_1$ norm $\|\boldsymbol{\beta}\|_1$, and setting
-  $C_j(\boldsymbol{\beta}) = \sum_{k=1}^p \gamma_{j,k}\, |\beta_k|$
-  where $\gamma_{j,k}$ are text-derived importance weights, yields
-  \begin{equation}
-  \label{eq:llm_lasso_nest}
-  \hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}}
-  \frac{1}{n}\sum_s (R_s - \boldsymbol{\beta}^\top \mathbf{X}_s)^2
-  + \lambda_{\mathrm{stat}} \|\boldsymbol{\beta}\|_1
-  + \mu_j \sum_k \gamma_{j,k}\, |\beta_k|,
-  \end{equation}
-  a variant of the adaptive Lasso with text-informed variable-specific
-  penalties, nesting the LLM-Lasso approach of
-  incorporating domain knowledge from large language models into
-  penalized regression.
 \end{enumerate}
 \end{proposition}
 
@@ -610,9 +541,6 @@ and the cross-validated theory-informed KRR is free to select
 $\hat{\mu}_j = 0$ if theory $j$ is unhelpful, the theory-informed
 estimator weakly dominates standard KRR in out-of-sample
 prediction loss---up to the granularity of the hyperparameter search.
-The same logic applies to each nested special case: the larger
-hyperparameter space can only improve (or match) the best
-achievable out-of-sample performance.
 \end{remark}
 
 %======================================================================
@@ -631,8 +559,8 @@ We assign each model $j$ to one of $G$ groups based on its
 economic type.  Let $g: \{1, \ldots, J\} \to \{1, \ldots, G\}$
 denote the group assignment, and impose $\mu_j = \mu_{g(j)}$
 for all $j$.  In our empirical application, $G = 8$, corresponding to
-the four penalty types (A--D) each potentially with two variants
-(e.g., consumption-based vs.\ production-based SDFs within Type~A).
+the three penalty types (A, B, D) each potentially with multiple variants
+(e.g., consumption-based vs.\ intermediary-based SDFs within Type~A).
 This reduces the hyperparameter space from $(J+1)$ to $(G+1) = 9$ dimensions.
 
 \paragraph{Temporal cross-validation.}
@@ -726,6 +654,27 @@ positive $\hat{\mu}_j$ if it captures useful structure despite not
 being exactly correct.
 The estimator thus exploits partial truths---a theory need not be
 exactly right to be useful for prediction.
+\end{remark}
+
+\begin{remark}[Misspecification and variable coverage]
+\label{rem:misspec_variables}
+Consider a concrete case: the investment CAPM (Restriction~14) predicts expected
+returns as a function of investment-to-capital ratio and profitability, but
+says nothing about consumption growth.
+Does this mean the penalty implicitly imposes that consumption has zero effect?
+No.
+Each $C_j$ constrains $f$ along the specific dimensions of $\mathbf{X}$ that
+enter the model's predictions, but leaves $f$'s dependence on other variables
+entirely unrestricted.
+The investment penalty pushes $f(\mathbf{X}_s)$ toward the production model's
+prediction $g_j(I/K, \mathrm{ROE})$ at each observation $s$, but $f$ remains
+free to use consumption growth, sentiment, or any other variable in $\mathbf{X}$
+to satisfy that target.
+Silence about a variable is not the same as imposing it has zero effect.
+The combined penalty $\sum_j \mu_j C_j(f)$ covers many dimensions of the
+characteristic space through different restrictions, and the $\mu_j \to 0$
+mechanism (Proposition~\ref{prop:misspecification}) handles restrictions
+that are quantitatively wrong, not merely incomplete.
 \end{remark}
 
 \begin{remark}[Comparison to Bayesian model averaging]
@@ -847,35 +796,3 @@ This provides a principled way to report which theories are
 ``useful'' for asset-pricing prediction at a given confidence level.
 \end{remark}
 
-%======================================================================
-\subsection{Summary of the Framework}
-\label{sub:summary_framework}
-%======================================================================
-
-Table~\ref{tab:framework_summary} collects the main components of the
-theory-informed KRR estimator.
-
-\begin{table}[htbp]
-\centering
-\caption{Summary of the theory-informed KRR framework}
-\label{tab:framework_summary}
-\small
-\begin{tabular}{@{}lll@{}}
-\toprule
-\textbf{Component} & \textbf{Role} & \textbf{Reference} \\
-\midrule
-Prediction loss & Fit to observed returns & Eq.~\eqref{eq:tikrr} \\
-RKHS penalty & Agnostic statistical regularization & Eq.~\eqref{eq:tikrr} \\
-Type~A penalty & Euler equation restrictions (SDF models) & Def.~\ref{def:euler_penalty} \\
-Type~B penalty & Production/investment FOC restrictions & Def.~\ref{def:prod_penalty} \\
-Type~C penalty & Factor structure restrictions & Def.~\ref{def:factor_penalty} \\
-Type~D penalty & Demand-system equilibrium restrictions & Def.~\ref{def:demand_penalty} \\
-Representer theorem & Finite-dimensional reduction & Prop.~\ref{prop:representer} \\
-First-order conditions & Closed-form for quadratic penalties & Prop.~\ref{prop:foc} \\
-Nesting & Recovers KRR, GMM, IPCA, Lasso variants & Prop.~\ref{prop:nesting} \\
-CV selection & Grouped penalties, temporal LOYO & Eq.~\eqref{eq:cv} \\
-Misspecification & Misspecified theories auto-downweight & Prop.~\ref{prop:misspecification} \\
-Inference & Test marginal value of each theory & Prop.~\ref{prop:test_mu} \\
-\bottomrule
-\end{tabular}
-\end{table}

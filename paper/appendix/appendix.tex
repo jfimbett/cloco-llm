@@ -1,6 +1,6 @@
 %!TEX root = ../main.tex
 %----------------------------------------------------------------------
-%  Appendix: Proofs
+%  Appendix
 %  Paper:   Theory-Informed Kernel Ridge Regression for Asset Pricing
 %  Authors: Amedeo Andriollo and Juan F. Imbet
 %----------------------------------------------------------------------
@@ -79,11 +79,11 @@ L(\boldsymbol{\alpha})
 + \sum_{j \in \mathcal{J}^A} \mu_j
   (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)^\top
   (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)
-+ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}
++ \sum_{j \in \mathcal{J}^{B}} \frac{\mu_j}{n}
   (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j)^\top
   (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j),
 \end{multline}
-where $\mathbf{v}_j = \mathbf{g}_j$ for Type~B and $\mathbf{v}_j = \mathbf{h}_j$ for Type~C.
+where $\mathbf{v}_j = \mathbf{g}_j$ for Type~B.
 Taking the gradient with respect to $\boldsymbol{\alpha}$:
 \begin{align}
 \frac{\partial L}{\partial \boldsymbol{\alpha}}
@@ -92,7 +92,7 @@ Taking the gradient with respect to $\boldsymbol{\alpha}$:
 + 2\sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{K}\mathbf{A}_j^\top
   (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)
 \notag \\
-&\quad + 2\sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{K}
+&\quad + 2\sum_{j \in \mathcal{J}^{B}} \frac{\mu_j}{n}\,\mathbf{K}
   (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j).
 \label{eq:gradient}
 \end{align}
@@ -103,10 +103,10 @@ Setting~\eqref{eq:gradient} to zero and left-multiplying by $\mathbf{K}^{-1}$
 + \lambda_{\mathrm{stat}}\,\boldsymbol{\alpha}
 + \sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{A}_j^\top\mathbf{A}_j
   \mathbf{K}\boldsymbol{\alpha}
-+ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{K}\boldsymbol{\alpha}
++ \sum_{j \in \mathcal{J}^{B}} \frac{\mu_j}{n}\,\mathbf{K}\boldsymbol{\alpha}
 = \frac{1}{n}\,\mathbf{R}
 + \sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{A}_j^\top\mathbf{b}_j
-+ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{v}_j.
++ \sum_{j \in \mathcal{J}^{B}} \frac{\mu_j}{n}\,\mathbf{v}_j.
 \]
 Collecting terms using the definitions of $\boldsymbol{\Omega}$
 and $\boldsymbol{\omega}$ from~\eqref{eq:Omega}--\eqref{eq:omega_vec}
@@ -128,21 +128,6 @@ formally, the sequence of penalized minimizers converges to the
 constrained minimizer provided $C_j$ is lower semicontinuous and
 $\{f \in \mathcal{H} : C_j(f) = 0\}$ is nonempty.
 Setting $\lambda_{\mathrm{stat}} = 0$ removes agnostic regularization.
-
-For~(iii), the linear kernel restricts $\mathcal{H}$ to linear functions
-$f(\mathbf{x}) = \boldsymbol{\beta}^\top \mathbf{x}$, with
-$\|f\|_{\mathcal{H}}^2 = \|\boldsymbol{\beta}\|^2$.
-Substituting a Type~C penalty with target-PCA factor loadings and
-simplifying gives~\eqref{eq:ipca_nest}.
-
-For~(iv), the correspondence is notational:
-the $\ell_1$ norm replaces the $\ell_2$ RKHS norm,
-and the structural penalty becomes a weighted $\ell_1$ term on coefficients
-rather than a penalty on function evaluations.
-The estimator~\eqref{eq:llm_lasso_nest} coincides with the adaptive
-Lasso when $\gamma_{j,k} = |\hat{\beta}_k^{\mathrm{init}}|^{-1}$
-and with text-informed penalization when $\gamma_{j,k}$ reflects
-LLM-derived variable relevance scores.
 \end{proof}
 
 %----------------------------------------------------------------------

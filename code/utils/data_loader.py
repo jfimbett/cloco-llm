@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
+from code.config import TEST_MODE, TEST_MAX_STOCKS_PER_MONTH
+
 # --- Identifier and return columns (not characteristics, not macro) ---
 _ID_COLS = ['permno', 'yyyymm', 'date', 'gvkey', 'sic']
 _RETURN_COLS = ['RET', 'RETX']
@@ -26,8 +28,21 @@ _NON_CHAR_COLS = set(_ID_COLS + _RETURN_COLS + _PRICE_COLS + _MACRO_COLS)
 
 
 def load_panel(path: str = 'data/processed/panel_monthly.parquet') -> pd.DataFrame:
-    """Load the monthly stock panel from parquet."""
-    return pd.read_parquet(path)
+    """Load the monthly stock panel from parquet.
+
+    When TEST_MODE is active, subsample to TEST_MAX_STOCKS_PER_MONTH random
+    stocks per month for fast iteration.
+    """
+    df = pd.read_parquet(path)
+    if TEST_MODE:
+        n = TEST_MAX_STOCKS_PER_MONTH
+        print(f"[TEST_MODE] Subsampling to {n} stocks per month")
+        df = (
+            df.groupby('yyyymm', group_keys=False)
+            .apply(lambda g: g.sample(n=min(len(g), n), random_state=42))
+        )
+        df = df.reset_index(drop=True)
+    return df
 
 
 def get_characteristic_cols(df: pd.DataFrame) -> list[str]:

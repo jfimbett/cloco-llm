@@ -16,7 +16,6 @@
 % ── Tables and figures ───────────────────────────────────────
 \usepackage{booktabs,tabularx,multirow,array}
 \usepackage{graphicx}
-\usepackage{float}
 \usepackage{caption,subcaption}
 
 % ── Bibliography ─────────────────────────────────────────────
@@ -121,9 +120,14 @@ Machine-learning methods for return prediction ignore economic theory. Structura
 % ══════════════════════════════════════════════════════════════
 
 \newpage
+\input{tables_and_figures}
+
+% ══════════════════════════════════════════════════════════════════════
+%  Appendix
+% ══════════════════════════════════════════════════════════════════════
+
+\newpage
 \appendix
-\input{appendix/proofs}
-\input{appendix/restriction_details}
-\input{appendix/additional_results}
+\input{appendix/appendix}
 
 \end{document}
