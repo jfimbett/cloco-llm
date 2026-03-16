@@ -1,0 +1,1051 @@
+%!TEX root = ../main.tex
+%----------------------------------------------------------------------
+%  Section: The Theory-Informed KRR Estimator
+%  Paper:   Theory-Informed Kernel Ridge Regression for Asset Pricing
+%  Authors: Amedeo Andriollo and Juan F. Imbet
+%----------------------------------------------------------------------
+
+\section{The Theory-Informed Kernel Ridge Regression Estimator}
+\label{sec:framework}
+
+This section develops the econometric framework.
+Section~\ref{sub:setup} introduces notation and the prediction environment.
+Section~\ref{sub:estimator} defines the theory-informed KRR objective.
+Sections~\ref{sub:penalties}--\ref{sub:finite_dim} formalize the structural penalty types
+and establish the representer theorem and finite-dimensional reduction that
+make the estimator computationally tractable.
+Section~\ref{sub:nesting} shows that the framework nests several influential
+estimators as special cases.
+Sections~\ref{sub:cv}--\ref{sub:inference} address implementation, misspecification
+robustness, and inference.
+
+%======================================================================
+\subsection{Setup and Notation}
+\label{sub:setup}
+%======================================================================
+
+We observe a panel of $N$ assets over $T$ periods.
+Let $R_{i,t+1}$ denote the excess return of asset $i$ realized at date $t+1$,
+and let $\mathbf{X}_{i,t} \in \mathbb{R}^p$ collect firm-level characteristics
+and macroeconomic state variables observable at date $t$.
+The total sample size is $n = NT$.
+
+\begin{assumption}[Data-generating process]
+\label{ass:dgp}
+There exists a measurable function $f^{*}: \mathbb{R}^{p} \to \mathbb{R}$
+such that
+\begin{equation}
+\label{eq:dgp}
+R_{i,t+1} = f^{*}(\mathbf{X}_{i,t}) + \varepsilon_{i,t+1},
+\qquad
+\mathbb{E}[\varepsilon_{i,t+1} \mid \mathbf{X}_{i,t}] = 0,
+\end{equation}
+where $f^{*}(\mathbf{X}_{i,t}) = \mathbb{E}[R_{i,t+1} \mid \mathbf{X}_{i,t}]$
+is the conditional expected excess return.
+\end{assumption}
+
+We approximate $f^{*}$ within a reproducing kernel Hilbert space (RKHS).
+
+\begin{definition}[RKHS]
+\label{def:rkhs}
+Let $k: \mathbb{R}^p \times \mathbb{R}^p \to \mathbb{R}$ be a symmetric,
+positive-definite kernel.
+The RKHS $\mathcal{H}$ associated with $k$ is the completion of
+$\operatorname{span}\{k(\mathbf{x}, \cdot) : \mathbf{x} \in \mathbb{R}^p\}$
+under the inner product satisfying the reproducing property
+$f(\mathbf{x}) = \langle f, k(\mathbf{x}, \cdot) \rangle_{\mathcal{H}}$
+for all $f \in \mathcal{H}$.
+The RKHS norm $\|f\|_{\mathcal{H}}^2 = \langle f, f \rangle_{\mathcal{H}}$
+measures the complexity of $f$.
+\end{definition}
+
+We stack observations using the index $s = (i,t)$, so that
+$\mathbf{X}_s \equiv \mathbf{X}_{i,t}$ and $R_s \equiv R_{i,t+1}$ for
+$s = 1, \ldots, n$.
+The $n \times n$ kernel (Gram) matrix is
+$\mathbf{K}$, with $[\mathbf{K}]_{s,s'} = k(\mathbf{X}_s, \mathbf{X}_{s'})$.
+The return vector is $\mathbf{R} = (R_1, \ldots, R_n)^\top \in \mathbb{R}^n$.
+
+%======================================================================
+\subsection{The Estimator}
+\label{sub:estimator}
+%======================================================================
+
+Our estimator augments the standard KRR objective with a collection of
+structural penalty terms, each encoding restrictions implied by a specific
+economic model.
+
+\begin{definition}[Theory-Informed KRR]
+\label{def:tikrr}
+Let $\{C_j\}_{j=1}^{J}$ be a collection of structural penalty functionals
+$C_j: \mathcal{H} \to \mathbb{R}_+$,
+where each $C_j(f) \geq 0$ with equality when $f$ satisfies the
+restrictions of economic model~$j$.
+Let $\lambda_{\mathrm{stat}} > 0$ and $\mu_j \geq 0$, $j = 1, \ldots, J$.
+The \emph{theory-informed KRR} estimator is
+\begin{equation}
+\label{eq:tikrr}
+\hat{f} \;=\; \arg\min_{f \in \mathcal{H}} \;
+\underbrace{\frac{1}{n}\sum_{s=1}^{n}
+  \bigl(R_s - f(\mathbf{X}_s)\bigr)^2}_{\text{prediction loss}}
+\;+\;
+\underbrace{\lambda_{\mathrm{stat}}\,\|f\|_{\mathcal{H}}^2}_{\text{statistical regularization}}
+\;+\;
+\underbrace{\sum_{j=1}^{J} \mu_j\, C_j(f)}_{\text{structural penalties}}.
+\end{equation}
+\end{definition}
+
+The first two terms constitute standard kernel ridge regression:
+the squared-error prediction loss trades off against the RKHS-norm penalty,
+which controls the smoothness of $f$.
+The third term is new.
+Each $C_j$ penalizes deviations from a specific economic model's
+predictions, and the associated multiplier $\mu_j$ governs how strongly
+that model's restrictions influence the estimate.
+When $\mu_j = 0$, model $j$ is ignored; as $\mu_j \to \infty$,
+the restrictions of model $j$ are imposed exactly.
+
+\begin{remark}[Interpretation of multipliers]
+\label{rem:multipliers}
+The vector $(\lambda_{\mathrm{stat}}, \mu_1, \ldots, \mu_J)$ balances
+agnostic statistical regularization against theory-informed regularization.
+A large $\lambda_{\mathrm{stat}}$ relative to $\mu_j$ yields an estimate
+close to standard KRR; large $\mu_j$ relative to $\lambda_{\mathrm{stat}}$
+forces the estimator to respect model $j$'s restrictions even if doing
+so worsens in-sample fit.
+Cross-validation selects the balance that maximizes out-of-sample
+predictive accuracy (Section~\ref{sub:cv}).
+\end{remark}
+
+%======================================================================
+\subsection{Structural Penalty Types}
+\label{sub:penalties}
+%======================================================================
+
+We formalize four classes of structural penalties.
+Each encodes restrictions from a distinct family of asset-pricing models.
+A key requirement---verified explicitly below---is that every $C_j(f)$
+depends on $f$ only through its evaluations at the observed data points
+$\{f(\mathbf{X}_s)\}_{s=1}^n$.
+
+%----------------------------------------------------------------------
+\subsubsection{Type~A: Euler Equation Penalties}
+\label{sub:euler}
+%----------------------------------------------------------------------
+
+Let model $j$ specify a stochastic discount factor (SDF)
+$M_{j,t+1} = M_j(\theta_j, \mathbf{X}_t, \mathbf{X}_{t+1})$
+parameterized by $\theta_j$, with a preliminary estimator
+$\hat{\theta}_j$ obtained by GMM or maximum likelihood.
+The Euler equation requires
+$\mathbb{E}_t[M_{j,t+1}\, R_{i,t+1}^{\mathrm{gross}}] = 1$
+for every asset $i$ and date $t$,
+where $R_{i,t+1}^{\mathrm{gross}} = f(\mathbf{X}_{i,t}) + R_t^f$
+is the gross return and $R_t^f$ is the risk-free rate.
+
+\begin{definition}[Euler equation penalty]
+\label{def:euler_penalty}
+For SDF model $j$ with pre-estimated parameter $\hat{\theta}_j$, define
+\begin{equation}
+\label{eq:euler_penalty}
+C_j^{\mathrm{Euler}}(f) \;=\;
+\sum_{t=1}^{T}
+\left\|
+\frac{1}{N}\sum_{i=1}^{N}
+M_j\bigl(\hat{\theta}_j, \mathbf{X}_t, \mathbf{X}_{t+1}\bigr)
+\cdot
+\bigl(f(\mathbf{X}_{i,t}) + R_t^f\bigr) - 1
+\right\|^2.
+\end{equation}
+\end{definition}
+
+\noindent
+The penalty is zero precisely when the cross-sectional Euler equation
+holds at every date $t$ given $\hat{\theta}_j$.
+Since $M_j(\hat{\theta}_j, \mathbf{X}_t, \mathbf{X}_{t+1})$ and $R_t^f$ are data,
+the penalty depends on $f$ only through $\{f(\mathbf{X}_{i,t})\}_{i,t}$.
+
+\begin{remark}[Coverage]
+Type~A penalties accommodate consumption-based models (CCAPM, long-run risk,
+rare disasters, habit formation), as well as production-based SDFs derived
+from firms' intertemporal optimality conditions.
+Each distinct SDF specification generates a separate penalty $C_j^{\mathrm{Euler}}$.
+\end{remark}
+
+%----------------------------------------------------------------------
+\subsubsection{Type~B: Production and Investment FOC Penalties}
+\label{sub:production}
+%----------------------------------------------------------------------
+
+Production-based asset pricing relates expected returns to observable
+investment and profitability variables through firms' first-order conditions.
+Let model $j$ imply a mapping $g_j: \mathbb{R}^{d_j} \to \mathbb{R}$
+from investment characteristics $\mathbf{Z}_{i,t}^{(j)}$
+(e.g., investment-to-capital ratio $I_{i,t}/K_{i,t}$, return on equity
+$\mathrm{ROE}_{i,t}$, asset growth) to expected returns.
+
+\begin{definition}[Production FOC penalty]
+\label{def:prod_penalty}
+For production model $j$ with predicted returns $g_j(\mathbf{Z}_{i,t}^{(j)})$, define
+\begin{equation}
+\label{eq:prod_penalty}
+C_j^{\mathrm{prod}}(f) \;=\;
+\frac{1}{n}\sum_{s=1}^{n}
+\bigl(
+f(\mathbf{X}_s) - g_j\bigl(\mathbf{Z}_s^{(j)}\bigr)
+\bigr)^2.
+\end{equation}
+\end{definition}
+
+\noindent
+The penalty is a mean-squared deviation between the nonparametric estimate
+and the production model's implied expected return.
+Since $g_j(\mathbf{Z}_s^{(j)})$ is computed from data, the penalty depends on $f$
+only through $\{f(\mathbf{X}_s)\}_{s=1}^n$.
+
+\begin{remark}[Nesting the $q$-theory framework]
+When $g_j$ encodes the first-order condition from the investment CAPM
+or the $q$-factor model,
+Type~B penalties embed the production approach
+to asset pricing directly into the nonparametric objective.
+\end{remark}
+
+%----------------------------------------------------------------------
+\subsubsection{Type~C: Factor Structure Penalties}
+\label{sub:factor}
+%----------------------------------------------------------------------
+
+Factor models impose that expected returns obey a linear pricing
+relation with respect to exposure to priced factors.
+Let model $j$ specify a factor $F_{j,t}$ (e.g., an intermediary capital
+ratio factor, market excess return, or a latent factor).
+Let $\beta_{i,j}$ denote asset $i$'s loading on $F_{j,t}$,
+pre-estimated by time-series regression, and let $\alpha_{i,j}$
+be the corresponding intercept.
+
+\begin{definition}[Factor structure penalty]
+\label{def:factor_penalty}
+For factor model $j$ with estimated loadings
+$\hat{\beta}_{i,j}$, $\hat{\alpha}_{i,j}$ ($i=1,\ldots,N$)
+and factor realizations $F_{j,t}$ ($t=1,\ldots,T$), define
+\begin{equation}
+\label{eq:factor_penalty}
+C_j^{\mathrm{factor}}(f) \;=\;
+\frac{1}{n}\sum_{i=1}^{N}\sum_{t=1}^{T}
+\bigl(
+f(\mathbf{X}_{i,t}) - \hat{\beta}_{i,j}\, F_{j,t} - \hat{\alpha}_{i,j}
+\bigr)^2.
+\end{equation}
+\end{definition}
+
+\noindent
+When asset pricing restricts $\hat{\alpha}_{i,j} = 0$ for all $i$
+(exact factor pricing), the penalty reduces to
+$\frac{1}{n}\sum_{i,t}(f(\mathbf{X}_{i,t}) - \hat{\beta}_{i,j}\, F_{j,t})^2$,
+penalizing deviations from the factor model's predictions of expected returns.
+Again, the penalty depends on $f$ only through $\{f(\mathbf{X}_{i,t})\}_{i,t}$.
+
+\begin{remark}[Intermediary asset pricing]
+When $F_{j,t}$ is the intermediary capital ratio or the intermediary leverage factor,
+Type~C penalties embed intermediary-based
+models into the nonparametric estimator.
+This is particularly valuable when the intermediary model captures
+time-variation in risk premia that firm-level characteristics alone cannot.
+\end{remark}
+
+%----------------------------------------------------------------------
+\subsubsection{Type~D: Demand-System Equilibrium Penalties}
+\label{sub:demand}
+%----------------------------------------------------------------------
+
+Demand-system approaches to asset pricing derive equilibrium prices
+from investors' portfolio demand functions.
+Let $D_i: \mathbb{R}^N \to \mathbb{R}^N$ map the vector of expected returns to investor~$i$'s
+optimal portfolio weights, and let $w_i > 0$ denote
+investor~$i$'s wealth share, with the index now running over investors
+rather than assets.
+Let $\mathbf{S}_t \in \mathbb{R}^N$ denote the vector of asset market-capitalization
+shares (the supply side) at date $t$.
+
+\begin{definition}[Demand-system equilibrium penalty]
+\label{def:demand_penalty}
+For demand-system model $j$ with demand functions
+$\{D_i^{(j)}\}$ and observed supplies $\{\mathbf{S}_t\}$, let
+$\hat{\mathbf{f}}_t = (f(\mathbf{X}_{1,t}), \ldots, f(\mathbf{X}_{N,t}))^\top$
+collect expected-return evaluations.  Define
+\begin{equation}
+\label{eq:demand_penalty}
+C_j^{\mathrm{demand}}(f) \;=\;
+\sum_{t=1}^{T}
+\left\|
+\sum_{i} w_i^{(j)}\, D_i^{(j)}\bigl(\hat{\mathbf{f}}_t\bigr) - \mathbf{S}_t
+\right\|^2.
+\end{equation}
+\end{definition}
+
+\noindent
+The penalty measures the squared market-clearing failure:
+it is zero when the demand system clears at the predicted expected returns.
+It depends on $f$ only through $\{f(\mathbf{X}_{i,t})\}_{i,t}$.
+
+\begin{remark}[Connections to the demand-system literature]
+The demand-system approach models institutional
+investors' demand as a function of characteristics and expected returns.
+Type~D penalties encode the equilibrium restriction that aggregate demand
+equals supply, translating the demand-system estimator's logic into a
+penalty within our nonparametric framework.
+When $D_i^{(j)}$ is linear in expected returns, $C_j^{\mathrm{demand}}$
+is quadratic in $\hat{\mathbf{f}}_t$ and the overall problem remains convex.
+\end{remark}
+
+%======================================================================
+\subsection{The Representer Theorem}
+\label{sub:representer}
+%======================================================================
+
+The following result establishes that the infinite-dimensional
+optimization problem~\eqref{eq:tikrr} admits a finite-dimensional
+solution, despite the presence of the structural penalties.
+
+\begin{proposition}[Representer theorem for theory-informed KRR]
+\label{prop:representer}
+Let $\mathcal{H}$ be an RKHS with kernel $k$.
+Suppose each structural penalty $C_j: \mathcal{H} \to \mathbb{R}_+$
+depends on $f$ only through the vector of evaluations
+$(f(\mathbf{X}_1), \ldots, f(\mathbf{X}_n))^\top \in \mathbb{R}^n$.
+That is, there exist functions $\tilde{C}_j: \mathbb{R}^n \to \mathbb{R}_+$
+such that
+\begin{equation}
+\label{eq:penalty_eval}
+C_j(f) = \tilde{C}_j\bigl(f(\mathbf{X}_1), \ldots, f(\mathbf{X}_n)\bigr)
+\qquad \text{for all } f \in \mathcal{H}, \; j = 1, \ldots, J.
+\end{equation}
+Then any minimizer of~\eqref{eq:tikrr} admits the representation
+\begin{equation}
+\label{eq:representer}
+\hat{f}(\cdot) = \sum_{s=1}^{n} \hat{\alpha}_s\, k(\mathbf{X}_s, \cdot),
+\end{equation}
+for some $\hat{\boldsymbol{\alpha}} = (\hat{\alpha}_1, \ldots, \hat{\alpha}_n)^\top
+\in \mathbb{R}^n$.
+\end{proposition}
+
+\begin{proof}
+Decompose any $f \in \mathcal{H}$ as $f = f_{\parallel} + f_{\perp}$,
+where $f_{\parallel}$ lies in the finite-dimensional subspace
+$\mathcal{V} = \operatorname{span}\{k(\mathbf{X}_s, \cdot) : s = 1, \ldots, n\}$
+and $f_{\perp} \in \mathcal{V}^{\perp}$.
+By the reproducing property,
+\[
+f(\mathbf{X}_s)
+= \langle f, k(\mathbf{X}_s, \cdot) \rangle_{\mathcal{H}}
+= \langle f_{\parallel}, k(\mathbf{X}_s, \cdot) \rangle_{\mathcal{H}}
+  + \langle f_{\perp}, k(\mathbf{X}_s, \cdot) \rangle_{\mathcal{H}}
+= f_{\parallel}(\mathbf{X}_s),
+\]
+since $k(\mathbf{X}_s, \cdot) \in \mathcal{V}$ and
+$f_{\perp} \perp \mathcal{V}$.
+Therefore the prediction loss
+$\frac{1}{n}\sum_s (R_s - f(\mathbf{X}_s))^2$
+depends only on $f_{\parallel}$, and so does every $C_j(f)$
+by assumption~\eqref{eq:penalty_eval}.
+
+For the RKHS norm, orthogonality gives
+$\|f\|_{\mathcal{H}}^2 = \|f_{\parallel}\|_{\mathcal{H}}^2 +
+\|f_{\perp}\|_{\mathcal{H}}^2$.
+Since $\|f_{\perp}\|_{\mathcal{H}}^2 \geq 0$ and
+$\lambda_{\mathrm{stat}} > 0$, the objective is strictly decreased
+by setting $f_{\perp} = 0$ whenever $f_{\perp} \neq 0$.
+Hence any minimizer satisfies $f = f_{\parallel} \in \mathcal{V}$,
+which yields the representation~\eqref{eq:representer}.
+\end{proof}
+
+\begin{remark}[Verification for Types~A--D]
+\label{rem:verify_representer}
+The condition~\eqref{eq:penalty_eval} holds for all four penalty types:
+\begin{enumerate}[label=(\alph*)]
+\item \emph{Type~A (Euler):}
+  $C_j^{\mathrm{Euler}}(f)$ depends on $f$ through
+  $\{f(\mathbf{X}_{i,t})\}_{i,t}$, since
+  $M_j(\hat{\theta}_j, \mathbf{X}_t, \mathbf{X}_{t+1})$ and $R_t^f$
+  are data.
+\item \emph{Type~B (Production):}
+  $C_j^{\mathrm{prod}}(f)$ is explicitly a function of
+  $\{f(\mathbf{X}_s)\}_{s}$ and data $\{g_j(\mathbf{Z}_s^{(j)})\}_s$.
+\item \emph{Type~C (Factor):}
+  $C_j^{\mathrm{factor}}(f)$ involves $\{f(\mathbf{X}_{i,t})\}_{i,t}$
+  and pre-estimated $\hat{\beta}_{i,j}$, $\hat{\alpha}_{i,j}$, $F_{j,t}$.
+\item \emph{Type~D (Demand):}
+  $C_j^{\mathrm{demand}}(f)$ depends on $f$ through
+  $\hat{\mathbf{f}}_t = (f(\mathbf{X}_{1,t}), \ldots, f(\mathbf{X}_{N,t}))^\top$.
+\end{enumerate}
+In each case, the penalty is a function of the $n$-dimensional evaluation
+vector, so Proposition~\ref{prop:representer} applies.
+This extends classical representer theorems to accommodate theory-informed
+structural penalties.
+\end{remark}
+
+%======================================================================
+\subsection{Finite-Dimensional Reduction}
+\label{sub:finite_dim}
+%======================================================================
+
+By Proposition~\ref{prop:representer}, it suffices to optimize
+over $\boldsymbol{\alpha} \in \mathbb{R}^n$.
+Substituting $f(\cdot) = \sum_s \alpha_s\, k(\mathbf{X}_s, \cdot)$ into
+the objective yields the following.
+
+\begin{proposition}[Finite-dimensional problem]
+\label{prop:finite_dim}
+Under the representer theorem (Proposition~\ref{prop:representer}),
+the theory-informed KRR estimator~\eqref{eq:tikrr} reduces to
+\begin{equation}
+\label{eq:finite_dim}
+\hat{\boldsymbol{\alpha}} \;=\; \arg\min_{\boldsymbol{\alpha} \in \mathbb{R}^n} \;
+\frac{1}{n}\|\mathbf{R} - \mathbf{K}\boldsymbol{\alpha}\|^2
+\;+\;
+\lambda_{\mathrm{stat}}\,\boldsymbol{\alpha}^\top \mathbf{K}\, \boldsymbol{\alpha}
+\;+\;
+\sum_{j=1}^{J} \mu_j\, \tilde{C}_j(\mathbf{K}\boldsymbol{\alpha}),
+\end{equation}
+where $\mathbf{K}$ is the $n \times n$ kernel matrix,
+$\hat{\mathbf{f}} = \mathbf{K}\boldsymbol{\alpha}$ is the $n \times 1$
+vector of fitted values, and
+$\tilde{C}_j(\hat{\mathbf{f}}) = C_j(f)$ expresses each penalty
+in terms of fitted values.
+\end{proposition}
+
+\begin{proof}
+The prediction loss becomes
+$\frac{1}{n}\|\mathbf{R} - \mathbf{K}\boldsymbol{\alpha}\|^2$
+since $f(\mathbf{X}_s) = \sum_{s'} \alpha_{s'} k(\mathbf{X}_{s'}, \mathbf{X}_s)
+= [\mathbf{K}\boldsymbol{\alpha}]_s$.
+For the RKHS norm,
+\[
+\|f\|_{\mathcal{H}}^2
+= \left\langle \sum_s \alpha_s\, k(\mathbf{X}_s, \cdot),\;
+         \sum_{s'} \alpha_{s'}\, k(\mathbf{X}_{s'}, \cdot) \right\rangle_{\mathcal{H}}
+= \sum_{s,s'} \alpha_s\, \alpha_{s'}\, k(\mathbf{X}_s, \mathbf{X}_{s'})
+= \boldsymbol{\alpha}^\top \mathbf{K}\, \boldsymbol{\alpha}.
+\]
+By condition~\eqref{eq:penalty_eval}, each $C_j(f)$ is a function of
+$\hat{\mathbf{f}} = \mathbf{K}\boldsymbol{\alpha}$.
+Combining yields~\eqref{eq:finite_dim}.
+\end{proof}
+
+%----------------------------------------------------------------------
+\subsubsection{Convexity and First-Order Conditions for Quadratic Penalties}
+\label{sub:foc}
+%----------------------------------------------------------------------
+
+When all active structural penalties are quadratic in the fitted values
+$\hat{\mathbf{f}} = \mathbf{K}\boldsymbol{\alpha}$, the finite-dimensional
+problem~\eqref{eq:finite_dim} becomes a convex quadratic program with
+a closed-form solution.
+
+For Type~A penalties, define the $T \times n$ matrix $\mathbf{A}_j$
+with rows indexed by $t$:
+\begin{equation}
+\label{eq:A_matrix}
+[\mathbf{A}_j]_{t,s} =
+\begin{cases}
+\dfrac{1}{N}\, M_j\bigl(\hat{\theta}_j, \mathbf{X}_t, \mathbf{X}_{t+1}\bigr)
+& \text{if } s = (i,t) \text{ for some } i, \\[4pt]
+0 & \text{otherwise},
+\end{cases}
+\end{equation}
+and the $T \times 1$ vector $\mathbf{b}_j$ with
+$[\mathbf{b}_j]_t = 1 - \frac{1}{N}\sum_i M_j(\hat{\theta}_j,
+\mathbf{X}_t, \mathbf{X}_{t+1})\, R_t^f$.
+Then
+\begin{equation}
+\label{eq:euler_quad}
+C_j^{\mathrm{Euler}}(f) =
+\|\mathbf{A}_j\, \hat{\mathbf{f}} - \mathbf{b}_j\|^2
+= (\mathbf{A}_j\, \mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)^\top
+  (\mathbf{A}_j\, \mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j).
+\end{equation}
+
+For Type~B penalties, let $\mathbf{g}_j \in \mathbb{R}^n$ with
+$[\mathbf{g}_j]_s = g_j(\mathbf{Z}_s^{(j)})$.  Then
+\begin{equation}
+\label{eq:prod_quad}
+C_j^{\mathrm{prod}}(f) =
+\frac{1}{n}\|\mathbf{K}\boldsymbol{\alpha} - \mathbf{g}_j\|^2.
+\end{equation}
+
+For Type~C penalties, let $\mathbf{h}_j \in \mathbb{R}^n$ with
+$[\mathbf{h}_j]_s = \hat{\beta}_{i,j}\, F_{j,t} + \hat{\alpha}_{i,j}$
+where $s = (i,t)$.  Then
+\begin{equation}
+\label{eq:factor_quad}
+C_j^{\mathrm{factor}}(f) =
+\frac{1}{n}\|\mathbf{K}\boldsymbol{\alpha} - \mathbf{h}_j\|^2.
+\end{equation}
+
+\begin{proposition}[First-order conditions]
+\label{prop:foc}
+Suppose every active penalty ($\mu_j > 0$) is of Type~A, B, or C
+(or more generally, quadratic in $\hat{\mathbf{f}}$).
+Define the aggregated penalty matrix
+\begin{equation}
+\label{eq:Omega}
+\boldsymbol{\Omega} \;=\;
+\sum_{j \in \mathcal{J}^A} \mu_j\, \mathbf{A}_j^\top \mathbf{A}_j
+\;+\;
+\sum_{j \in \mathcal{J}^B} \frac{\mu_j}{n}\, \mathbf{I}_n
+\;+\;
+\sum_{j \in \mathcal{J}^C} \frac{\mu_j}{n}\, \mathbf{I}_n,
+\end{equation}
+where $\mathcal{J}^A$, $\mathcal{J}^B$, $\mathcal{J}^C$ index
+Type~A, B, and C penalties respectively, and the aggregated target vector
+\begin{equation}
+\label{eq:omega_vec}
+\boldsymbol{\omega} \;=\;
+\sum_{j \in \mathcal{J}^A} \mu_j\, \mathbf{A}_j^\top \mathbf{b}_j
+\;+\;
+\sum_{j \in \mathcal{J}^B} \frac{\mu_j}{n}\, \mathbf{g}_j
+\;+\;
+\sum_{j \in \mathcal{J}^C} \frac{\mu_j}{n}\, \mathbf{h}_j.
+\end{equation}
+Then the first-order conditions for~\eqref{eq:finite_dim} are
+\begin{equation}
+\label{eq:foc}
+\left[
+\frac{1}{n}\,\mathbf{K}
++ \lambda_{\mathrm{stat}}\,\mathbf{I}_n
++ \boldsymbol{\Omega}\,\mathbf{K}
+\right] \boldsymbol{\alpha}
+\;=\;
+\frac{1}{n}\,\mathbf{R}
++ \boldsymbol{\omega},
+\end{equation}
+and when $\mathbf{K}$ is strictly positive definite, the unique solution is
+\begin{equation}
+\label{eq:alpha_star}
+\hat{\boldsymbol{\alpha}} \;=\;
+\left[
+\frac{1}{n}\,\mathbf{K}
++ \lambda_{\mathrm{stat}}\,\mathbf{I}_n
++ \boldsymbol{\Omega}\,\mathbf{K}
+\right]^{-1}
+\left(
+\frac{1}{n}\,\mathbf{R} + \boldsymbol{\omega}
+\right).
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Write the objective~\eqref{eq:finite_dim} with quadratic penalties as
+\begin{multline}
+\label{eq:obj_expanded}
+L(\boldsymbol{\alpha})
+= \frac{1}{n}(\mathbf{R} - \mathbf{K}\boldsymbol{\alpha})^\top
+  (\mathbf{R} - \mathbf{K}\boldsymbol{\alpha})
++ \lambda_{\mathrm{stat}}\,\boldsymbol{\alpha}^\top\mathbf{K}\boldsymbol{\alpha} \\
++ \sum_{j \in \mathcal{J}^A} \mu_j
+  (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)^\top
+  (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)
++ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}
+  (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j)^\top
+  (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j),
+\end{multline}
+where $\mathbf{v}_j = \mathbf{g}_j$ for Type~B and $\mathbf{v}_j = \mathbf{h}_j$ for Type~C.
+Taking the gradient with respect to $\boldsymbol{\alpha}$:
+\begin{align}
+\frac{\partial L}{\partial \boldsymbol{\alpha}}
+&= -\frac{2}{n}\,\mathbf{K}(\mathbf{R} - \mathbf{K}\boldsymbol{\alpha})
++ 2\lambda_{\mathrm{stat}}\,\mathbf{K}\boldsymbol{\alpha}
++ 2\sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{K}\mathbf{A}_j^\top
+  (\mathbf{A}_j\mathbf{K}\boldsymbol{\alpha} - \mathbf{b}_j)
+\notag \\
+&\quad + 2\sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{K}
+  (\mathbf{K}\boldsymbol{\alpha} - \mathbf{v}_j).
+\label{eq:gradient}
+\end{align}
+Setting~\eqref{eq:gradient} to zero and left-multiplying by $\mathbf{K}^{-1}$
+(which exists when $\mathbf{K} \succ 0$):
+\[
+\frac{1}{n}\,\mathbf{K}\boldsymbol{\alpha}
++ \lambda_{\mathrm{stat}}\,\boldsymbol{\alpha}
++ \sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{A}_j^\top\mathbf{A}_j
+  \mathbf{K}\boldsymbol{\alpha}
++ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{K}\boldsymbol{\alpha}
+= \frac{1}{n}\,\mathbf{R}
++ \sum_{j \in \mathcal{J}^A} \mu_j\,\mathbf{A}_j^\top\mathbf{b}_j
++ \sum_{j \in \mathcal{J}^{B,C}} \frac{\mu_j}{n}\,\mathbf{v}_j.
+\]
+Collecting terms using the definitions of $\boldsymbol{\Omega}$
+and $\boldsymbol{\omega}$ from~\eqref{eq:Omega}--\eqref{eq:omega_vec}
+gives~\eqref{eq:foc}.
+Strict positive definiteness of $\mathbf{K}$ and $\lambda_{\mathrm{stat}} > 0$
+ensure the coefficient matrix in~\eqref{eq:foc} is invertible, yielding
+uniqueness.
+\end{proof}
+
+\begin{remark}[Computational cost]
+\label{rem:computation}
+The dominant cost is solving the $n \times n$ linear system~\eqref{eq:alpha_star},
+which requires $O(n^3)$ operations.
+When $n$ is large, one can exploit the eigendecomposition
+$\mathbf{K} = \mathbf{U}\boldsymbol{\Lambda}\mathbf{U}^\top$
+(computed once at cost $O(n^3)$) and solve in the rotated basis,
+where the matrix becomes diagonal plus a low-rank perturbation from
+the Type~A penalties.
+Alternatively, random Fourier features or Nystr\"{o}m approximations
+reduce the effective dimension.
+\end{remark}
+
+\begin{remark}[Type~D penalties and convexity]
+\label{rem:type_d_convexity}
+When demand functions $D_i^{(j)}$ are linear in expected returns,
+$C_j^{\mathrm{demand}}$ is quadratic in $\hat{\mathbf{f}}$ and the
+problem remains a convex QP with a structure analogous to~\eqref{eq:foc}.
+For nonlinear demand systems, the problem is generally nonconvex and
+requires iterative methods (e.g., projected gradient descent or
+alternating minimization), though convexity of the remaining terms
+provides a useful warm start.
+\end{remark}
+
+%======================================================================
+\subsection{Nesting Structure}
+\label{sub:nesting}
+%======================================================================
+
+A key advantage of the framework is that it nests several influential
+estimators as special or limiting cases.
+This both clarifies the relationship between existing methods and
+suggests that the theory-informed KRR estimator can weakly dominate
+each special case.
+
+\begin{proposition}[Nesting]
+\label{prop:nesting}
+The theory-informed KRR estimator~\eqref{eq:tikrr} nests the following:
+\begin{enumerate}[label=(\roman*)]
+\item \textbf{Standard KRR.}
+  Setting $\mu_j = 0$ for all $j = 1, \ldots, J$ yields
+  \[
+  \hat{f}^{\mathrm{KRR}} = \arg\min_{f \in \mathcal{H}}
+  \frac{1}{n}\sum_s (R_s - f(\mathbf{X}_s))^2
+  + \lambda_{\mathrm{stat}}\|f\|_{\mathcal{H}}^2,
+  \]
+  the standard kernel ridge regression estimator.
+
+\item \textbf{Constrained minimum-distance / GMM.}
+  Setting $\lambda_{\mathrm{stat}} = 0$ and activating a single
+  Type~A penalty with $\mu_j \to \infty$ yields
+  \[
+  \hat{f}^{\mathrm{GMM}} = \arg\min_{f \in \mathcal{H}}
+  \frac{1}{n}\sum_s (R_s - f(\mathbf{X}_s))^2
+  \quad \text{s.t.} \quad
+  C_j^{\mathrm{Euler}}(f) = 0,
+  \]
+  which is a nonparametric generalization of GMM-based SDF estimation.
+  When $\mathcal{H}$ is restricted to parametric functions,
+  this recovers classical GMM.
+
+\item \textbf{Approximate instrumented PCA.}
+  Consider a linear kernel $k(\mathbf{x}, \mathbf{x}') = \mathbf{x}^\top \mathbf{x}'$
+  so that $f(\mathbf{X}_{i,t}) = \boldsymbol{\beta}^\top \mathbf{X}_{i,t}$
+  for some $\boldsymbol{\beta} \in \mathbb{R}^p$, and a Type~C penalty
+  where the factor $F_{j,t}$ is a target-PCA factor.
+  Then~\eqref{eq:tikrr} becomes
+  \begin{equation}
+  \label{eq:ipca_nest}
+  \hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}}
+  \frac{1}{n}\sum_{i,t}(R_{i,t+1} - \boldsymbol{\beta}^\top \mathbf{X}_{i,t})^2
+  + \lambda_{\mathrm{stat}}\|\boldsymbol{\beta}\|^2
+  + \mu_j \frac{1}{n}\sum_{i,t}
+    (\boldsymbol{\beta}^\top \mathbf{X}_{i,t}
+     - \hat{\beta}_{i,j} F_{j,t})^2,
+  \end{equation}
+  a ridge regression with an additional penalty encouraging alignment
+  with the target-PCA factor structure.
+  This approximates the cross-sectional
+  and time-series restrictions in instrumented PCA methods.
+
+\item \textbf{Text-informed penalized regression.}
+  Replacing $\mathcal{H}$ with a finite-dimensional linear space
+  $\mathbb{R}^p$, substituting the RKHS-norm penalty with an
+  $\ell_1$ norm $\|\boldsymbol{\beta}\|_1$, and setting
+  $C_j(\boldsymbol{\beta}) = \sum_{k=1}^p \gamma_{j,k}\, |\beta_k|$
+  where $\gamma_{j,k}$ are text-derived importance weights, yields
+  \begin{equation}
+  \label{eq:llm_lasso_nest}
+  \hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}}
+  \frac{1}{n}\sum_s (R_s - \boldsymbol{\beta}^\top \mathbf{X}_s)^2
+  + \lambda_{\mathrm{stat}} \|\boldsymbol{\beta}\|_1
+  + \mu_j \sum_k \gamma_{j,k}\, |\beta_k|,
+  \end{equation}
+  a variant of the adaptive Lasso with text-informed variable-specific
+  penalties, nesting the LLM-Lasso approach of
+  incorporating domain knowledge from large language models into
+  penalized regression.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+Claims~(i) and~(ii) follow directly from the definition.
+For~(i), setting $\mu_j = 0$ eliminates the structural penalties.
+For~(ii), taking $\mu_j \to \infty$ enforces $C_j(f) = 0$ as a constraint;
+formally, the sequence of penalized minimizers converges to the
+constrained minimizer provided $C_j$ is lower semicontinuous and
+$\{f \in \mathcal{H} : C_j(f) = 0\}$ is nonempty.
+Setting $\lambda_{\mathrm{stat}} = 0$ removes agnostic regularization.
+
+For~(iii), the linear kernel restricts $\mathcal{H}$ to linear functions
+$f(\mathbf{x}) = \boldsymbol{\beta}^\top \mathbf{x}$, with
+$\|f\|_{\mathcal{H}}^2 = \|\boldsymbol{\beta}\|^2$.
+Substituting a Type~C penalty with target-PCA factor loadings and
+simplifying gives~\eqref{eq:ipca_nest}.
+
+For~(iv), the correspondence is notational:
+the $\ell_1$ norm replaces the $\ell_2$ RKHS norm,
+and the structural penalty becomes a weighted $\ell_1$ term on coefficients
+rather than a penalty on function evaluations.
+The estimator~\eqref{eq:llm_lasso_nest} coincides with the adaptive
+Lasso when $\gamma_{j,k} = |\hat{\beta}_k^{\mathrm{init}}|^{-1}$
+and with text-informed penalization when $\gamma_{j,k}$ reflects
+LLM-derived variable relevance scores.
+\end{proof}
+
+\begin{remark}[Weak dominance]
+\label{rem:weak_dominance}
+Since standard KRR corresponds to $\mu_j = 0$ for all $j$,
+and the cross-validated theory-informed KRR is free to select
+$\hat{\mu}_j = 0$ if theory $j$ is unhelpful, the theory-informed
+estimator weakly dominates standard KRR in out-of-sample
+prediction loss---up to the granularity of the hyperparameter search.
+The same logic applies to each nested special case: the larger
+hyperparameter space can only improve (or match) the best
+achievable out-of-sample performance.
+\end{remark}
+
+%======================================================================
+\subsection{Cross-Validation for Hyperparameter Selection}
+\label{sub:cv}
+%======================================================================
+
+The hyperparameter vector
+$\boldsymbol{\lambda} = (\lambda_{\mathrm{stat}}, \mu_1, \ldots, \mu_J)$
+is $(J+1)$-dimensional.
+We introduce grouped penalties and temporal cross-validation
+to make the selection tractable.
+
+\paragraph{Grouped penalties.}
+We assign each model $j$ to one of $G$ groups based on its
+economic type.  Let $g: \{1, \ldots, J\} \to \{1, \ldots, G\}$
+denote the group assignment, and impose $\mu_j = \mu_{g(j)}$
+for all $j$.  In our empirical application, $G = 8$, corresponding to
+the four penalty types (A--D) each potentially with two variants
+(e.g., consumption-based vs.\ production-based SDFs within Type~A).
+This reduces the hyperparameter space from $(J+1)$ to $(G+1) = 9$ dimensions.
+
+\paragraph{Temporal cross-validation.}
+Financial panel data exhibit strong serial dependence, so we use
+leave-one-year-out (LOYO) cross-validation to select $\boldsymbol{\lambda}$.
+Partition the sample into $T_{\mathrm{yr}}$ calendar years
+$\mathcal{T}_1, \ldots, \mathcal{T}_{T_{\mathrm{yr}}}$.
+For fold $\ell$, let
+$\mathcal{S}_{-\ell} = \{(i,t) : t \notin \mathcal{T}_\ell\}$ be the
+training set and $\mathcal{S}_\ell = \{(i,t) : t \in \mathcal{T}_\ell\}$
+the validation set.
+The cross-validated objective is
+\begin{equation}
+\label{eq:cv}
+\mathrm{CV}(\boldsymbol{\lambda}) \;=\;
+\frac{1}{T_{\mathrm{yr}}} \sum_{\ell=1}^{T_{\mathrm{yr}}}
+\frac{1}{|\mathcal{S}_\ell|}
+\sum_{s \in \mathcal{S}_\ell}
+\bigl(R_s - \hat{f}_{-\ell}(\mathbf{X}_s; \boldsymbol{\lambda})\bigr)^2,
+\end{equation}
+where $\hat{f}_{-\ell}(\cdot; \boldsymbol{\lambda})$ is the theory-informed
+KRR estimator trained on $\mathcal{S}_{-\ell}$ with hyperparameters
+$\boldsymbol{\lambda}$.
+
+\paragraph{Search strategy.}
+We minimize $\mathrm{CV}(\boldsymbol{\lambda})$ by random search over
+a 9-dimensional log-uniform grid:
+$\log_{10}\lambda_{\mathrm{stat}} \in [-6, 2]$ and
+$\log_{10}\mu_g \in [-6, 2]$ for $g = 1, \ldots, G$.
+We draw $B = 500$ random configurations and evaluate each by solving
+the finite-dimensional problem~\eqref{eq:finite_dim} $T_{\mathrm{yr}}$
+times (once per fold).
+The selected hyperparameters are
+$\hat{\boldsymbol{\lambda}} = \arg\min_{\boldsymbol{\lambda}}
+\mathrm{CV}(\boldsymbol{\lambda})$.
+
+\begin{remark}[Computational considerations]
+\label{rem:cv_computation}
+Each fold requires solving a linear system of size $|\mathcal{S}_{-\ell}|$,
+which is $O(((T_{\mathrm{yr}}-1) \cdot N / T_{\mathrm{yr}})^3)$ per fold.
+With $T_{\mathrm{yr}} \approx 30$--$60$ years and $N \approx 3{,}000$--$10{,}000$
+assets, this is demanding but feasible with precomputed kernel
+eigendecompositions and parallelization across folds and random draws.
+The total cost scales as $O(B \cdot T_{\mathrm{yr}} \cdot n_{\mathrm{fold}}^3)$
+where $n_{\mathrm{fold}} = |\mathcal{S}_{-\ell}|$.
+\end{remark}
+
+%======================================================================
+\subsection{Misspecification Robustness}
+\label{sub:misspecification}
+%======================================================================
+
+A central concern with theory-informed estimation is that imposing
+restrictions from a misspecified model may worsen predictions.
+The following result shows that cross-validation provides an automatic
+safeguard.
+
+\begin{proposition}[Misspecification robustness]
+\label{prop:misspecification}
+Suppose model $j$ is misspecified in the sense that the true
+conditional expected return function $f^*$ satisfies
+$C_j(f^*) > 0$.
+Under the following regularity conditions:
+\begin{enumerate}[label=\textnormal{(R\arabic*)}]
+\item \label{cond:consistency}
+  The RKHS $\mathcal{H}$ is rich enough that
+  $\inf_{f \in \mathcal{H}} \|f - f^*\|_{L^2} = 0$;
+\item \label{cond:cv_oracle}
+  The cross-validation procedure~\eqref{eq:cv} is asymptotically
+  oracle-efficient in the sense that
+  $\mathrm{CV}(\hat{\boldsymbol{\lambda}}) - \inf_{\boldsymbol{\lambda}}
+  \mathrm{CV}(\boldsymbol{\lambda}) = o_p(1)$;
+\item \label{cond:bounded}
+  The penalty $C_j$ is continuous in $\|\cdot\|_{L^2}$ and the
+  parameter space for $\mu_j$ includes zero;
+\end{enumerate}
+the cross-validated multiplier satisfies
+$\hat{\mu}_j \xrightarrow{p} 0$ as $n \to \infty$.
+\end{proposition}
+
+\begin{proof}
+We show that any $\mu_j > 0$ introduces an asymptotic bias, so the
+oracle sets $\mu_j^* = 0$.
+
+\emph{Step 1: Asymptotic bias from misspecification.}
+When $C_j(f^*) > 0$, the set
+$\mathcal{F}_j(\mu_j) = \arg\min_{f \in \mathcal{H}}
+\frac{1}{n}\sum_s (R_s - f(\mathbf{X}_s))^2
++ \lambda_{\mathrm{stat}}\|f\|_{\mathcal{H}}^2 + \mu_j C_j(f)$
+converges (as $n \to \infty$ and $\lambda_{\mathrm{stat}} \to 0$ at an
+appropriate rate) to the population minimizer
+\[
+f_j^*(\mu_j) = \arg\min_{f} \mathbb{E}[(R - f(\mathbf{X}))^2] + \mu_j C_j(f).
+\]
+By~\ref{cond:consistency}, $f_j^*(0) = f^*$.
+For $\mu_j > 0$, the term $\mu_j C_j(f)$ tilts the solution toward
+$\{f : C_j(f) \text{ is small}\}$.
+Since $C_j(f^*) > 0$, this tilt is binding: $f_j^*(\mu_j) \neq f^*$
+for all $\mu_j > 0$, and the prediction risk satisfies
+\[
+\mathbb{E}\bigl[(R - f_j^*(\mu_j)(\mathbf{X}))^2\bigr]
+> \mathbb{E}\bigl[(R - f^*(\mathbf{X}))^2\bigr]
+= \mathbb{E}[\varepsilon^2]
+\qquad \text{for all } \mu_j > 0.
+\]
+
+\emph{Step 2: Risk gap is bounded away from zero.}
+By continuity of $C_j$ (condition~\ref{cond:bounded}) and strict
+convexity of the population prediction risk,
+for any $\delta > 0$ there exists $c(\delta) > 0$ such that
+\[
+\mathrm{Risk}(\mu_j) - \mathrm{Risk}(0)
+\;\geq\; c(\delta) > 0
+\qquad \text{for all } \mu_j \geq \delta,
+\]
+where $\mathrm{Risk}(\mu_j) = \mathbb{E}[(R - f_j^*(\mu_j)(\mathbf{X}))^2]$.
+
+\emph{Step 3: Oracle efficiency implies $\hat{\mu}_j \to 0$.}
+By~\ref{cond:cv_oracle}, $\mathrm{CV}(\hat{\boldsymbol{\lambda}})$
+tracks the oracle $\inf_{\boldsymbol{\lambda}} \mathrm{CV}(\boldsymbol{\lambda})$
+up to $o_p(1)$.  Since the oracle selects $\mu_j^* = 0$
+(the unique risk minimizer along the $\mu_j$ coordinate by Step~2),
+and the risk gap is bounded below by $c(\delta)$ for $\mu_j \geq \delta$,
+we have $\Pr(\hat{\mu}_j \geq \delta) \to 0$ for every $\delta > 0$.
+\end{proof}
+
+\begin{remark}[Practical implication]
+\label{rem:misspec_practical}
+Proposition~\ref{prop:misspecification} provides a theoretical guarantee
+that misspecified theories ``turn themselves off'' through cross-validation.
+In finite samples, a moderately misspecified theory may still receive
+positive $\hat{\mu}_j$ if it captures useful structure despite not
+being exactly correct.
+The estimator thus exploits partial truths---a theory need not be
+exactly right to be useful for prediction.
+\end{remark}
+
+\begin{remark}[Comparison to Bayesian model averaging]
+\label{rem:bma}
+The misspecification robustness of theory-informed KRR is analogous to
+Bayesian model averaging (BMA) in spirit: both frameworks downweight
+models that fit poorly out of sample.
+However, the mechanism differs.
+BMA assigns posterior probabilities to discrete model specifications,
+whereas theory-informed KRR treats each model's restrictions as a
+continuous penalty with cross-validated strength.
+The latter avoids the combinatorial explosion of the BMA model space
+and allows partial incorporation of each theory's restrictions.
+\end{remark}
+
+%======================================================================
+\subsection{Inference on Model Value}
+\label{sub:inference}
+%======================================================================
+
+Beyond prediction, one may wish to test whether a particular economic
+model contributes statistically significant information beyond agnostic
+regularization.
+This amounts to testing
+\begin{equation}
+\label{eq:test_mu}
+H_0: \mu_j^* = 0
+\qquad \text{vs.} \qquad
+H_1: \mu_j^* > 0,
+\end{equation}
+where $\mu_j^*$ is the population-optimal multiplier for model $j$.
+Rejection of $H_0$ implies that model $j$ provides marginal predictive
+value beyond what the kernel and other models already capture.
+
+%----------------------------------------------------------------------
+\subsubsection{Connection to Uniform Inference for KRR}
+\label{sub:uniform_inference}
+%----------------------------------------------------------------------
+
+Recent work by \citet*{SinghVijaykumar2023} establishes uniform
+confidence bands for kernel ridge regression estimators of conditional
+expectations.
+Their framework provides pointwise and uniform inference for
+$f^*(\mathbf{x})$ across $\mathbf{x} \in \mathcal{X}$ using
+a bias-corrected estimator and variance estimation based on the
+kernel's spectral properties.
+
+We outline how this can be extended to test~\eqref{eq:test_mu}.
+
+\begin{proposition}[Testing the marginal value of economic models]
+\label{prop:test_mu}
+Suppose the conditions of \citet*{SinghVijaykumar2023} hold for
+the RKHS $\mathcal{H}$, augmented with the following:
+\begin{enumerate}[label=\textnormal{(T\arabic*)}]
+\item \label{cond:test_smooth}
+  The mapping $\mu_j \mapsto \hat{f}(\cdot\,; \mu_j)$ is differentiable
+  in $L^2$, with derivative $\partial_{\mu_j} \hat{f}$ satisfying
+  $\|\partial_{\mu_j} \hat{f}\|_{L^2} = O(1)$;
+\item \label{cond:test_rate}
+  The estimation error satisfies
+  $\|\hat{f}(\cdot\,; \hat{\boldsymbol{\lambda}}) - f^*\|_\infty = O_p(r_n)$
+  for a rate $r_n \to 0$.
+\end{enumerate}
+Define the test statistic
+\begin{equation}
+\label{eq:T_stat}
+T_j \;=\;
+n \cdot \bigl[\mathrm{CV}(\hat{\boldsymbol{\lambda}}_{-j})
+- \mathrm{CV}(\hat{\boldsymbol{\lambda}})\bigr],
+\end{equation}
+where $\hat{\boldsymbol{\lambda}}_{-j}$ denotes the cross-validated
+hyperparameters with $\mu_j$ constrained to zero.
+Under $H_0\!: \mu_j^* = 0$, $T_j = o_p(1)$.
+Under $H_1\!: \mu_j^* > 0$, $T_j \to \infty$ in probability.
+\end{proposition}
+
+\begin{proof}
+\emph{Under $H_0$.}
+When $\mu_j^* = 0$, the oracle solution does not use model $j$.
+Constraining $\mu_j = 0$ therefore imposes no binding restriction on the
+population objective.
+The difference
+$\mathrm{CV}(\hat{\boldsymbol{\lambda}}_{-j}) -
+\mathrm{CV}(\hat{\boldsymbol{\lambda}})$
+arises solely from finite-sample noise in the cross-validated selection
+of the remaining hyperparameters.
+By condition~\ref{cond:test_rate} and the oracle efficiency
+in~\ref{cond:cv_oracle}, this difference is
+$O_p(n^{-1} r_n)$, so $T_j = n \cdot O_p(n^{-1} r_n) = O_p(r_n) = o_p(1)$.
+
+\emph{Under $H_1$.}
+When $\mu_j^* > 0$, constraining $\mu_j = 0$ removes a binding
+restriction.
+By condition~\ref{cond:test_smooth},
+the population risk increases by at least
+$c > 0$ (a positive constant depending on $\mu_j^*$ and $C_j$).
+By uniform convergence of the cross-validated risk to the population risk,
+$\mathrm{CV}(\hat{\boldsymbol{\lambda}}_{-j}) -
+\mathrm{CV}(\hat{\boldsymbol{\lambda}}) \geq c/2 > 0$
+with probability approaching one.
+Hence $T_j = n(c/2 + o_p(1)) \to \infty$.
+\end{proof}
+
+\begin{remark}[Permutation inference]
+\label{rem:permutation}
+A full distributional theory for $T_j$ under $H_0$ (critical values,
+size control, power analysis) requires characterizing the joint
+distribution of the cross-validated hyperparameters, which we defer
+to future work.
+In practice, we implement permutation-based inference:
+randomly reassign the structural penalty $C_j$ to pseudo-models
+(scrambling the economic content while preserving the penalty's
+functional form) and compare $T_j$ to the permutation distribution.
+This yields valid $p$-values under exchangeability of the
+pseudo-model assignments.
+\end{remark}
+
+\begin{remark}[Interpretation]
+\label{rem:test_interpretation}
+The test~\eqref{eq:test_mu} asks a fundamentally different question
+from testing whether a model's pricing errors are zero.
+A model may have large pricing errors ($C_j(f^*) > 0$) yet still
+receive $\mu_j^* > 0$ if its restrictions are correlated with the
+true $f^*$ in a way that improves finite-sample estimation.
+Conversely, a correctly specified model ($C_j(f^*) = 0$) may have
+$\mu_j^* = 0$ if the RKHS and data are rich enough that the model's
+restrictions are redundant.
+The test thus measures the \emph{marginal predictive value} of each
+theory in the presence of all others.
+\end{remark}
+
+\begin{remark}[Relation to model confidence sets]
+\label{rem:mcs}
+The pairwise comparison underlying~\eqref{eq:T_stat} connects to
+the model confidence set (MCS) framework of
+\citet*{HansenLundeNason2011}.
+One could construct an MCS of theories whose marginal contributions
+are statistically indistinguishable:
+$\widehat{\mathrm{MCS}}_\alpha = \{j : T_j \leq c_\alpha\}$,
+where $c_\alpha$ is calibrated by the permutation distribution.
+This provides a principled way to report which theories are
+``useful'' for asset-pricing prediction at a given confidence level.
+\end{remark}
+
+%======================================================================
+\subsection{Summary of the Framework}
+\label{sub:summary_framework}
+%======================================================================
+
+Table~\ref{tab:framework_summary} collects the main components of the
+theory-informed KRR estimator.
+
+\begin{table}[htbp]
+\centering
+\caption{Summary of the theory-informed KRR framework}
+\label{tab:framework_summary}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Component} & \textbf{Role} & \textbf{Reference} \\
+\midrule
+Prediction loss & Fit to observed returns & Eq.~\eqref{eq:tikrr} \\
+RKHS penalty & Agnostic statistical regularization & Eq.~\eqref{eq:tikrr} \\
+Type~A penalty & Euler equation restrictions (SDF models) & Def.~\ref{def:euler_penalty} \\
+Type~B penalty & Production/investment FOC restrictions & Def.~\ref{def:prod_penalty} \\
+Type~C penalty & Factor structure restrictions & Def.~\ref{def:factor_penalty} \\
+Type~D penalty & Demand-system equilibrium restrictions & Def.~\ref{def:demand_penalty} \\
+Representer theorem & Finite-dimensional reduction & Prop.~\ref{prop:representer} \\
+First-order conditions & Closed-form for quadratic penalties & Prop.~\ref{prop:foc} \\
+Nesting & Recovers KRR, GMM, IPCA, Lasso variants & Prop.~\ref{prop:nesting} \\
+CV selection & Grouped penalties, temporal LOYO & Eq.~\eqref{eq:cv} \\
+Misspecification & Misspecified theories auto-downweight & Prop.~\ref{prop:misspecification} \\
+Inference & Test marginal value of each theory & Prop.~\ref{prop:test_mu} \\
+\bottomrule
+\end{tabular}
+\end{table}

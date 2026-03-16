@@ -26,6 +26,13 @@
 *.xdv
 paper/**/*.pdf
 
+# Data files (too large for git)
+data/raw/
+data/processed/
+
+# Output artifacts
+output/
+
 # Python cache
 __pycache__/
 *.pyc

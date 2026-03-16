@@ -1,0 +1,510 @@
+%!TEX root = ../main.tex
+%----------------------------------------------------------------------
+%  Section 3: Structural Restrictions Catalog
+%  Paper:   Theory-Informed Kernel Ridge Regression for Asset Pricing
+%  Authors: Amedeo Andriollo and Juan F. Imbet
+%----------------------------------------------------------------------
+
+\section{Structural Restrictions Catalog}\label{sec:restrictions}
+
+Each restriction in our framework originates from a specific economic model and imposes a distinct functional constraint on the mapping from observable characteristics to expected returns.
+A consumption-based Euler equation with power utility implies a different penalty $C_j(f)$ than one with Epstein--Zin preferences, even though both restrict the same SDF moment condition, because the functional form of the stochastic discount factor $M_{j,t+1}$ differs.
+Similarly, a production-based investment CAPM penalty differs from a $q$-theory penalty not merely in its parameter values but in which investment variables enter the mapping $g_j$ and how they interact.
+The penalties are not interchangeable: each encodes a qualitatively different economic hypothesis about why expected returns vary across assets and over time.
+
+We organize the fifty-six restrictions into eight families, grouped by economic mechanism: consumption-based Euler equations, production-based and investment restrictions, intermediary and institutional restrictions, information and learning restrictions, demand-system and market microstructure restrictions, variance and volatility restrictions, behavioral and sentiment restrictions, and macro-finance and term structure restrictions.
+For each restriction, we specify three elements: the source model (the economic theory that implies it), the mathematical form of the restriction (the SDF, first-order condition, or equilibrium condition), and the penalty functional $C_j(f)$ through which it enters the Theory-KRR objective~\eqref{eq:tikrr} from Section~\ref{sec:framework}.
+Because every penalty $C_j(f)$ depends on $f$ only through its evaluations at observed data points $\{f(\mathbf{X}_s)\}_{s=1}^n$, the representer theorem (Proposition~\ref{prop:representer}) applies to the full collection, and the estimator remains computationally tractable regardless of how many restrictions are active.
+
+
+%======================================================================
+\subsection{Consumption-Based Euler Equations}\label{sub:euler_restrictions}
+%======================================================================
+
+Consumption-based models derive asset-pricing restrictions from the representative agent's intertemporal optimality condition.
+The Euler equation $\E[M_{t+1} R_{i,t+1}^{\mathrm{gross}} \mid \Fcal_t] = 1$ must hold for every asset $i$ and date $t$, where the SDF $M_{t+1}$ is determined by the agent's preferences and the consumption process.
+Different preference specifications---power utility, recursive utility, habit formation, long-run risk---yield different SDFs and hence different penalties.
+All thirteen restrictions in this family are Type~A (Euler equation) penalties as defined in Section~\ref{sub:euler}:
+\begin{equation}\label{eq:euler_family}
+C_j^{\mathrm{Euler}}(f) \;=\;
+\sum_{t=1}^{T}
+\left(
+\frac{1}{N}\sum_{i=1}^{N}
+M_j\bigl(\hat{\theta}_j, \mathbf{X}_t, \mathbf{X}_{t+1}\bigr)
+\cdot
+\bigl(f(\mathbf{X}_{i,t}) + R_t^f\bigr) - 1
+\right)^2,
+\end{equation}
+where $\hat{\theta}_j$ denotes pre-estimated preference parameters obtained by GMM.
+What distinguishes the thirteen restrictions is solely the form of $M_j$.
+
+\begin{table}[H]
+\centering
+\caption{Consumption-Based Euler Equation Restrictions}
+\label{tab:euler}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & SDF / Penalty Form \\
+\midrule
+1 & Power utility (C-CAPM)
+  & \citep{breeden1979intertemporal,lucas1978asset}
+  & $M_{t+1} = \delta\left(\frac{C_{t+1}}{C_t}\right)^{-\gamma}$ \\[6pt]
+2 & Epstein--Zin recursive utility
+  & \citep{epsteinzin1989substitution}
+  & $M_{t+1} = \delta^\theta \left(\frac{C_{t+1}}{C_t}\right)^{-\theta/\psi} R_{m,t+1}^{\theta-1}$, \quad $\theta = \frac{1-\gamma}{1-1/\psi}$ \\[6pt]
+3 & External habit (surplus ratio)
+  & \citep{campbellcochrane1999}
+  & $M_{t+1} = \delta\left(\frac{S_{t+1}}{S_t}\right)^{-\gamma}\left(\frac{C_{t+1}}{C_t}\right)^{-\gamma}$, \quad $S_t = \frac{C_t - H_t}{C_t}$ \\[6pt]
+4 & Internal habit (difference)
+  & \citep{constantinides1990habit}
+  & $M_{t+1} = \delta\,\frac{(C_{t+1} - bC_t)^{-\gamma}}{(C_t - bC_{t-1})^{-\gamma}}$ \\[6pt]
+5 & Internal habit (ratio)
+  & \citep{abel1990asset}
+  & $M_{t+1} = \delta\,\frac{(C_{t+1}/C_t^b)^{-\gamma}}{(C_t/C_{t-1}^b)^{-\gamma}}$ \\[6pt]
+6 & Long-run risk
+  & \citep{bansalyaron2004}
+  & $M_{t+1}$ under Epstein--Zin with $\Delta c_{t+1} = \mu + x_t + \sigma_t \eta_{t+1}$; $x_t$ persistent, $\sigma_t^2$ stochastic \\[6pt]
+7 & Long-run risk with jumps
+  & \citep{drechsleryaron2011}
+  & Adds compound Poisson jumps in $\sigma_t^2$ to the Bansal--Yaron SDF \\[6pt]
+8 & Rare disaster (constant intensity)
+  & \citep{barro2006rare,gabaix2012variable}
+  & $M_{t+1}$ includes disaster probability $p$ and contraction size $b$: $M_{t+1} \propto (1 - p + p \cdot b^{-\gamma})$ \\[6pt]
+9 & Variable rare disaster
+  & \citep{wachter2013disaster}
+  & Time-varying disaster intensity $\lambda_t$ following a Cox process; $M_{t+1}$ depends on $\lambda_t, \lambda_{t+1}$ \\[6pt]
+10 & Precautionary savings (prudence)
+  & \citep{kimball1990precautionary,leland1968saving}
+  & $M_{t+1} \approx \delta(C_{t+1}/C_t)^{-\gamma}[1 + \frac{\gamma+1}{2}\sigma^2_{c,t}]$; prudence terms \\[6pt]
+11 & Durable consumption
+  & \citep{yogo2006durable}
+  & Epstein--Zin with nondurable and durable consumption; $M_{t+1}$ depends on $(C_{t+1}/C_t)$, $(D_{t+1}/D_t)$, and $R_{m,t+1}$ \\[6pt]
+12 & Heterogeneous agents
+  & \citep{constantinidesduffie1996}
+  & $M_{t+1} = \delta(C_{t+1}/C_t)^{-\gamma} \exp[-\frac{\gamma(\gamma+1)}{2}\sigma^2_{\text{cross}}]$; $\sigma^2_{\text{cross}}$ = cross-sectional cons.\ variance \\[6pt]
+13 & Nonparametric Euler
+  & \citep{escanciano2016nonparametric}
+  & $M_{t+1} = g(C_{t+1}/C_t)$ with $g$ unknown, identified nonparametrically from Euler equation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The thirteen consumption-based restrictions span several distinct economic channels.
+Restrictions~1--5 vary preferences while maintaining i.i.d.\ or simple Markov consumption dynamics; what differs is how marginal utility depends on consumption growth and, in the habit models, on the history of consumption.
+Power utility (Restriction~1) serves as the baseline, and each subsequent preference specification adds a mechanism---intertemporal substitution separated from risk aversion (Restriction~2), slow-moving external habit (Restriction~3), or direct dependence on lagged consumption (Restrictions~4--5).
+These five SDFs share the same data requirements (aggregate consumption growth) but impose different functional relationships between $M_{t+1}$ and $\Delta c_{t+1}$.
+
+Restrictions~6--9 modify the consumption \emph{process} rather than preferences alone.
+Long-run risk (Restriction~6) introduces a persistent expected-growth component $x_t$ and stochastic volatility $\sigma_t$, both of which enter the SDF through Epstein--Zin recursion; the SDF depends on the news to $x_t$ and $\sigma_t^2$, not merely on realized consumption growth.
+Adding jumps (Restriction~7) generates occasional large movements in volatility that are absent under Gaussian dynamics.
+Rare disaster models (Restrictions~8--9) replace continuous volatility variation with low-probability, high-impact consumption contractions.
+The economic content differs sharply: long-run risk explains the equity premium through intertemporal hedging demand, while disaster models explain it through the pricing of tail events.
+
+Restrictions~10--13 extend the framework along further dimensions.
+Precautionary savings (Restriction~10) introduces higher-order risk terms via the prudence coefficient, generating SDF dependence on conditional consumption variance.
+Durable consumption (Restriction~11) adds a second consumption good with its own intratemporal elasticity.
+Heterogeneous agents (Restriction~12) replaces the representative consumer with a continuum of agents whose idiosyncratic consumption risk enters the aggregate SDF through the cross-sectional variance of consumption growth.
+The nonparametric Euler restriction (Restriction~13) abandons parametric preferences entirely, requiring only that some monotone decreasing function of consumption growth prices assets correctly---it serves as a benchmark that detects whether \emph{any} consumption-based SDF is empirically useful, without committing to a specific functional form.
+
+
+%======================================================================
+\subsection{Production-Based and Investment Restrictions}\label{sub:prod_restrictions}
+%======================================================================
+
+Production-based asset-pricing models derive expected returns from firms' intertemporal investment decisions.
+The key insight is that firms equate the marginal cost of investment today to the expected discounted marginal benefit, and this first-order condition links expected stock returns to observable investment and profitability variables.
+All ten restrictions in this family are Type~B (production FOC) penalties as defined in Section~\ref{sub:production}:
+\begin{equation}\label{eq:prod_family}
+C_j^{\mathrm{prod}}(f) \;=\;
+\frac{1}{n}\sum_{s=1}^{n}
+\bigl(f(\mathbf{X}_s) - g_j(\mathbf{Z}_s^{(j)})\bigr)^2,
+\end{equation}
+where $g_j$ maps firm-level investment characteristics $\mathbf{Z}_{i,t}^{(j)}$ to expected returns.
+The functional form of $g_j$ and the variables that enter $\mathbf{Z}_{i,t}^{(j)}$ vary across restrictions.
+
+\begin{table}[H]
+\centering
+\caption{Production-Based and Investment Restrictions}
+\label{tab:production}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & Key Penalty Form \\
+\midrule
+14 & Investment CAPM
+   & \citep{cochrane1991production,liuwhitedzhang2009}
+   & $g_{14}(I/K, \mathrm{ROE})$: expected return equals marginal cost of investment via $q$-theory SDF \\[6pt]
+15 & $q$-theory factor model
+   & \citep{houxuezhang2015}
+   & $g_{15}(I/K, \mathrm{ROE}, \mathrm{EG})$: three-factor pricing from investment, profitability, expected growth \\[6pt]
+16 & Convex adjustment costs
+   & \citep{hayashi1982tobin}
+   & $g_{16}(I/K) = \phi'(I_{i,t}/K_{i,t})$: marginal Tobin's $q$ equals marginal adjustment cost \\[6pt]
+17 & Nonconvex adjustment costs
+   & \citep{abeleberly1996,cooperhaltiwanger2006}
+   & $g_{17}(I/K, \ind_{\{|I/K|>h\}})$: adds fixed costs and partial irreversibility via indicator for large adjustments \\[6pt]
+18 & Irreversibility
+   & \citep{abeleberly1996,zhang2005value}
+   & $g_{18}(I/K, \ind_{\{I<0\}})$: asymmetric adjustment costs with higher cost of disinvestment \\[6pt]
+19 & Financial constraints (collateral)
+   & \citep{kiyotakimoore1997}
+   & $g_{19}(I/K, K/\text{debt})$: expected return premium reflects binding collateral constraint \\[6pt]
+20 & Financial constraints (equity issuance)
+   & \citep{hennessywhited2005}
+   & $g_{20}(I/K, \text{leverage}, \text{cash flow})$: equity issuance costs create a wedge in the investment FOC \\[6pt]
+21 & Costly external finance
+   & \citep{livdansaprizazhang2009}
+   & $g_{21}(I/K, \text{leverage}, \text{dividends})$: external financing premium enters marginal cost of capital \\[6pt]
+22 & Labor-augmented production
+   & \citep{belolinbazdresch2014}
+   & $g_{22}(I/K, \mathrm{HN})$: hiring rate $\mathrm{HN}$ enters alongside physical investment via labor adjustment costs \\[6pt]
+23 & Intangible capital
+   & \citep{eisfeldtpapanikolaou2013}
+   & $g_{23}(I/K, \text{R\&D}/K, \text{SGA}/K)$: intangible investment (R\&D, organizational capital) augments physical $I/K$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The production-based restrictions divide into three groups.
+Restrictions~14--18 concern the technology of physical capital adjustment.
+The investment CAPM (Restriction~14) and $q$-theory (Restriction~15) provide the broadest frameworks: expected returns are determined by firms' optimal investment behavior, with investment-to-capital ratio and profitability as the key state variables.
+Restrictions~16--18 refine the adjustment cost specification.
+Convex adjustment costs (Restriction~16) yield a smooth, monotone relationship between $I/K$ and expected returns.
+Nonconvex adjustment costs (Restriction~17) and irreversibility (Restriction~18) break this smoothness: large adjustments incur fixed costs, and disinvestment is more expensive than investment.
+These restrictions generate different functional forms for $g_j$---Restriction~16 predicts a linear or quadratic relationship in $I/K$, while Restrictions~17--18 predict threshold effects and asymmetries.
+
+Restrictions~19--21 address financial frictions.
+These models predict that expected returns reflect not only the marginal product of capital but also the shadow cost of financing constraints.
+The three restrictions differ in which friction binds: collateral constraints (Restriction~19) link the premium to the ratio of capital to debt, equity issuance costs (Restriction~20) link it to leverage and internal cash flow, and costly external finance (Restriction~21) links it to the dividend payout and leverage.
+All three predict that financially constrained firms earn higher expected returns, but the mapping from observables to the constraint's shadow value differs across models.
+
+Restrictions~22--23 expand the set of productive inputs beyond physical capital.
+Labor adjustment costs (Restriction~22) introduce the hiring rate as an additional state variable in the investment FOC, generating a two-dimensional mapping $(I/K, \mathrm{HN}) \mapsto \E[R]$.
+Intangible capital (Restriction~23) adds R\&D spending and selling, general, and administrative expenses as measures of intangible investment, recognizing that knowledge capital and organizational capital are productive assets with their own adjustment costs.
+
+
+%======================================================================
+\subsection{Intermediary and Institutional Restrictions}\label{sub:intermediary_restrictions}
+%======================================================================
+
+Intermediary asset-pricing models posit that marginal investors are not households but financial intermediaries---broker-dealers, banks, hedge funds---whose pricing kernels reflect institutional constraints on leverage, capital, and funding.
+When intermediaries are the marginal pricers, expected returns depend on intermediary-specific state variables: capital ratios, leverage, funding spreads, and balance-sheet capacity.
+All eight restrictions in this family are Type~C (factor structure) penalties as defined in Section~\ref{sub:factor}:
+\begin{equation}\label{eq:intermediary_family}
+C_j^{\mathrm{factor}}(f) \;=\;
+\frac{1}{n}\sum_{i=1}^{N}\sum_{t=1}^{T}
+\bigl(f(\mathbf{X}_{i,t}) - \hat{\beta}_{i,j}\, F_{j,t} - \hat{\alpha}_{i,j}\bigr)^2,
+\end{equation}
+where $F_{j,t}$ is the intermediary factor and $\hat{\beta}_{i,j}$ is asset $i$'s loading on that factor.
+
+\begin{table}[H]
+\centering
+\caption{Intermediary and Institutional Restrictions}
+\label{tab:intermediary}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & Key Penalty Form \\
+\midrule
+24 & Intermediary capital ratio
+   & \citep{hekrishnamurthy2013}
+   & $F_{24,t}$ = intermediary capital ratio; SDF linear in $F_{24,t}$ with time-varying risk prices \\[6pt]
+25 & Intermediary leverage
+   & \citep{adrianetulamuir2014}
+   & $F_{25,t}$ = broker-dealer leverage factor; innovations in leverage price cross-section \\[6pt]
+26 & Funding liquidity
+   & \citep{brunnermeier2009}
+   & $F_{26,t}$ = funding liquidity measure (TED spread, Libor-OIS); margins amplify funding shocks \\[6pt]
+27 & Dealer balance sheet
+   & \citep{hekellymanela2017}
+   & $F_{27,t}$ = primary dealer equity capital ratio; single-factor model for broad cross-section \\[6pt]
+28 & Limits to arbitrage / noise trader
+   & \citep{delong1990noise}
+   & $F_{28,t}$ = noise-trader sentiment proxy; mispricing risk is priced because arbitrage is limited \\[6pt]
+29 & Slow-moving capital
+   & \citep{duffie2010slow}
+   & $F_{29,t}$ = capital flow proxy; price deviations from fundamentals persist due to slow reallocation \\[6pt]
+30 & Margin CAPM
+   & \citep{garleanupedersen2011}
+   & $F_{30,t}$ = margin requirement factor; expected returns depend on both market beta and margin beta \\[6pt]
+31 & Leverage constraints / BAB
+   & \citep{frazzinipedersen2014}
+   & $F_{31,t}$ = betting-against-beta factor; leverage-constrained investors tilt toward high-beta, compressing alpha \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The intermediary restrictions separate into models of intermediary health (Restrictions~24--25, 27) and models of market frictions that constrain intermediation (Restrictions~26, 28--31).
+The intermediary capital ratio (Restriction~24) and leverage (Restriction~25) factors capture the state of broker-dealer balance sheets: when capital is depleted or leverage is high, the marginal value of wealth to the intermediary rises, increasing risk prices.
+The dealer balance sheet factor (Restriction~27) constructs an equity capital ratio specifically for primary dealers, providing a more direct measure of the capacity constraint.
+These three restrictions use different empirical proxies for the same conceptual channel---intermediary distress---and their relative $\mu_j$ values reveal which proxy captures the pricing-relevant variation.
+
+Restrictions~26 and 28--31 focus on frictions in the trading environment.
+Funding liquidity (Restriction~26) links expected returns to the cost and availability of short-term funding: when funding dries up, margins increase and leveraged positions are unwound, creating fire-sale dynamics.
+Limits to arbitrage (Restriction~28) and slow-moving capital (Restriction~29) introduce a role for mispricing persistence---arbitrageurs face constraints (capital, risk limits, organizational frictions) that prevent immediate price correction.
+The margin CAPM (Restriction~30) derives a two-beta model in which both market exposure and margin exposure are priced, while the leverage-constraint model (Restriction~31) predicts a compressed security market line because leverage-constrained investors overweight high-beta assets.
+The key distinction: Restrictions~24--27 model \emph{who} the marginal pricer is, while Restrictions~28--31 model \emph{what constrains} the marginal pricer.
+
+
+%======================================================================
+\subsection{Information and Learning Restrictions}\label{sub:info_restrictions}
+%======================================================================
+
+Information and learning models generate expected-return variation from agents' incomplete knowledge about economic fundamentals.
+Unlike consumption-based models, where the SDF is pinned down by preferences and the consumption process, these models derive pricing implications from the structure of beliefs---how agents learn, what they are uncertain about, and how they process information.
+These restrictions generate Type~A penalties when they specify a complete SDF (Restrictions~32--35) or Type~C penalties when they imply a factor structure driven by a belief-related state variable (Restrictions~36--37).
+
+\begin{table}[H]
+\centering
+\caption{Information and Learning Restrictions}
+\label{tab:information}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & Key Penalty Form \\
+\midrule
+32 & Bayesian learning about growth
+   & \citep{pastorveronesi2009}
+   & Type~A: $M_{t+1}$ depends on posterior mean and variance of long-run growth rate \\[6pt]
+33 & Learning about regime
+   & \citep{david2008heterogeneous,veronesi1999}
+   & Type~A: $M_{t+1}$ depends on regime probability $\pi_t = P(\text{good state} \mid \Fcal_t)$; belief updates amplify volatility \\[6pt]
+34 & Parameter uncertainty
+   & \citep{johanneskorteweg2014}
+   & Type~A: $M_{t+1}$ integrates over posterior distribution of model parameters; predictive variance enters pricing \\[6pt]
+35 & Ambiguity aversion
+   & \citep{epsteinschneider2008,ilutschneider2014}
+   & Type~A: agent evaluates returns under worst-case prior from ambiguity set $\mathcal{P}$; $M_{t+1}$ = worst-case density ratio \\[6pt]
+36 & Disagreement
+   & \citep{basak2005asset,xiongyan2010}
+   & Type~C: $F_{36,t}$ = dispersion of beliefs; disagreement generates a priced factor via speculative trading \\[6pt]
+37 & Rational inattention
+   & \citep{mackowiak2009optimal,vannieuwerburgh2010information}
+   & Type~C: $F_{37,t}$ = information flow proxy; limited attention capacity generates endogenous information asymmetry \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The six information restrictions differ in \emph{what} agents are uncertain about and \emph{how} they process that uncertainty.
+Bayesian learning (Restriction~32) generates time-varying risk premia because the posterior variance of growth declines as data accumulate, changing the conditional distribution of the SDF.
+Regime learning (Restriction~33) produces a distinct mechanism: agents infer a latent state (expansion vs.\ recession), and uncertainty about the current regime amplifies return volatility and risk premia---the SDF depends on the belief $\pi_t$ rather than on a parameter estimate.
+Parameter uncertainty (Restriction~34) prices the risk that the true data-generating process is unknown, generating a premium for model risk that shrinks only slowly with sample size.
+
+Ambiguity aversion (Restriction~35) departs from Bayesian updating altogether: the agent entertains a set of plausible models $\mathcal{P}$ and evaluates each asset under the worst-case model.
+The SDF is the likelihood ratio between the worst-case and reference models, generating pricing implications distinct from those of any single Bayesian model.
+Disagreement (Restriction~36) and rational inattention (Restriction~37) shift focus from a single agent's beliefs to the cross-section of beliefs.
+Disagreement models price the dispersion of beliefs as a risk factor (optimists hold long positions, pessimists short, and their trading generates a risk premium).
+Rational inattention models generate endogenous information asymmetry: agents with limited processing capacity allocate attention optimally, and the resulting heterogeneity in information sets produces cross-sectional variation in expected returns.
+
+
+%======================================================================
+\subsection{Demand-System and Market Microstructure Restrictions}\label{sub:demand_restrictions}
+%======================================================================
+
+Demand-system models derive asset prices from the aggregation of heterogeneous investors' portfolio demands.
+The equilibrium restriction is market clearing: aggregate demand for each asset must equal its supply.
+This yields Type~D (demand-system equilibrium) penalties as defined in Section~\ref{sub:demand}:
+\begin{equation}\label{eq:demand_family}
+C_j^{\mathrm{demand}}(f) \;=\;
+\sum_{t=1}^{T}
+\left\|
+\sum_{i} w_i^{(j)}\, D_i^{(j)}\bigl(\hat{\mathbf{f}}_t\bigr) - \mathbf{S}_t
+\right\|^2,
+\end{equation}
+where $\hat{\mathbf{f}}_t = (f(\mathbf{X}_{1,t}), \ldots, f(\mathbf{X}_{N,t}))^\top$ and $\mathbf{S}_t$ denotes market-capitalization shares.
+Restrictions~41--43 involve microstructure frictions and take modified forms as described below.
+
+\begin{table}[H]
+\centering
+\caption{Demand-System and Market Microstructure Restrictions}
+\label{tab:demand}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & Key Penalty Form \\
+\midrule
+38 & Market clearing / demand system
+   & \citep{koijenyogo2019}
+   & Type~D: $D_i$ depends on characteristics and latent demand; aggregate demand = supply at $\hat{\mathbf{f}}_t$ \\[6pt]
+39 & Portfolio choice FOC / asset demand
+   & \citep{koijenrichmondyogo2024}
+   & Type~D: $D_i$ derived from first-order conditions with characteristic-based demand elasticities \\[6pt]
+40 & Inelastic markets
+   & \citep{gabaixkoijen2021}
+   & Type~D: aggregate demand inelasticity $\epsilon$ amplifies flow shocks; price impact = $\Delta \text{flow}/\epsilon$ \\[6pt]
+41 & Search frictions OTC
+   & \citep{duffiegarleanupedersen2005}
+   & Modified Type~B: $g_{41}$ includes search intensity and bargaining power; illiquidity premium = $f_{\text{search}}(\lambda, \beta)$ \\[6pt]
+42 & Fire sale externalities
+   & \citep{shleifervishny1992}
+   & Modified Type~C: $F_{42,t}$ = fire-sale pressure proxy; forced selling by distressed funds depresses prices \\[6pt]
+43 & Short-sale constraints
+   & \citep{miller1977risk,hongstein2003}
+   & Modified Type~B: $g_{43}$ predicts overpricing as a function of short interest and disagreement among investors \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The demand-system restrictions (38--40) share the market-clearing equilibrium condition but differ in the structure of investors' demand functions.
+Restriction~38 models demand as a function of observable characteristics and a latent demand shock, estimating the demand system directly from portfolio holdings data.
+Restriction~39 derives demand from investors' optimality conditions with characteristic-based demand elasticities, providing a micro-founded demand function.
+Restriction~40 focuses on the \emph{aggregate} demand elasticity: when total market demand is inelastic, flow-driven trading has outsized price impact, and expected returns reflect the accommodation of demand shocks rather than fundamental risk.
+
+Restrictions~41--43 address frictions that prevent instantaneous and costless trading.
+Search frictions (Restriction~41) apply primarily to over-the-counter markets, where finding a counterparty takes time; the expected-return penalty includes the search intensity and the buyer's bargaining power.
+Fire sale externalities (Restriction~42) generate a factor-like penalty: when multiple leveraged institutions simultaneously liquidate positions, prices deviate from fundamentals by an amount proportional to the aggregate selling pressure.
+Short-sale constraints (Restriction~43) restrict the adjustment mechanism on the negative side: when pessimists cannot short, asset prices reflect only optimists' valuations, and the degree of overpricing depends on the divergence of opinions and the binding intensity of the constraint.
+
+
+%======================================================================
+\subsection{Variance and Volatility Restrictions}\label{sub:option_restrictions}
+%======================================================================
+
+Variance and volatility models link expected returns to measures of conditional variance and the compensation investors demand for bearing variance risk.
+These two restrictions use publicly available data---the CBOE Volatility Index (VIX) as a measure of implied variance and daily CRSP returns to compute realized variance---rather than individual equity option data, making them applicable to the broad cross-section over the post-1990 period.
+Both restrictions generate Type~B penalties that map volatility-related state variables to expected returns.
+
+\begin{table}[H]
+\centering
+\caption{Variance and Volatility Restrictions}
+\label{tab:options}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & Key Penalty Form \\
+\midrule
+44 & Variance risk premium
+   & \citep{bollerslevtauchenzhou2009}
+   & Type~B: $g_{44}(\mathrm{VRP}_t) = \mathrm{IV}_t^2 - \E_t[\mathrm{RV}_{t+1}]$; VRP predicts aggregate returns \\[6pt]
+45 & Stochastic volatility
+   & \citep{heston1993}
+   & Type~B: $g_{45}(V_t)$; conditional variance $V_t$ follows CIR process; variance risk carries its own risk premium \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The two variance and volatility restrictions capture complementary aspects of volatility pricing.
+The variance risk premium (Restriction~44) uses the spread between implied variance (from VIX) and expected realized variance (computed from daily CRSP returns within each month) as a predictor of aggregate returns; the penalty penalizes discrepancies between $f(\mathbf{X}_t)$ and the VRP-implied expected return.
+\citet{bollerslevtauchenzhou2009} show that VRP is a strong predictor of market returns at horizons from one to six months, and the restriction encodes this predictive relationship.
+Stochastic volatility (Restriction~45) uses the conditional variance $V_t$ from a Heston-type model, where VIX serves as a proxy for the latent conditional variance and the variance process carries its own risk premium distinct from the equity premium.
+Together, these restrictions ensure that the estimator respects the well-documented relationship between variance dynamics and expected returns without requiring granular option-level data.
+
+
+%======================================================================
+\subsection{Behavioral and Sentiment Restrictions}\label{sub:behavioral_restrictions}
+%======================================================================
+
+Behavioral models derive expected-return patterns from departures from rational expectations or expected utility.
+These restrictions do not derive an SDF from a representative agent's Euler equation; instead, they predict cross-sectional or time-series return patterns as functions of behavioral variables---past returns, capital gains, sentiment indices.
+Most generate Type~B penalties, where $g_j$ maps behavioral state variables to expected returns.
+
+\begin{table}[H]
+\centering
+\caption{Behavioral and Sentiment Restrictions}
+\label{tab:behavioral}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & Key Penalty Form \\
+\midrule
+46 & Prospect theory / loss aversion
+   & \citep{barberishuangsantos2001}
+   & Type~A: $M_{t+1}$ modified by loss aversion coefficient $\lambda$ around reference point; kink at zero gain \\[6pt]
+47 & Overconfidence
+   & \citep{danielhirshleifer1998}
+   & Type~B: $g_{47}(\text{momentum}, \text{reversal})$; overconfident agents generate short-run continuation, long-run reversal \\[6pt]
+48 & Disposition effect / capital gains overhang
+   & \citep{frazzini2006disposition}
+   & Type~B: $g_{48}(\text{CGO}_{i,t})$; capital gains overhang = unrealized gain/loss relative to reference price \\[6pt]
+49 & Extrapolative expectations
+   & \citep{barberis2018extrapolation}
+   & Type~B: $g_{49}(\bar{R}_{i,t}^{\text{past}})$; agents extrapolate recent returns, generating momentum and mean reversion \\[6pt]
+50 & Investor sentiment
+   & \citep{bakerwurgler2006}
+   & Type~C: $F_{50,t}$ = Baker--Wurgler sentiment index; high sentiment predicts low returns for speculative stocks \\[6pt]
+51 & Salience theory
+   & \citep{bordalo2012salience}
+   & Type~B: $g_{51}(\text{salience}_{i,t})$; agents overweight salient (extreme) payoffs, distorting subjective probabilities \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The behavioral restrictions exploit distinct psychological mechanisms.
+Prospect theory (Restriction~46) modifies the SDF with a kink at the reference point: losses are weighted more heavily than gains by a factor $\lambda > 1$, generating a first-order risk premium for assets whose returns covary with movements around the reference point.
+This is the only behavioral restriction that directly specifies an SDF, placing it closest to the consumption-based framework.
+
+Restrictions~47--49 generate cross-sectional return predictability from belief formation biases.
+Overconfidence (Restriction~47) produces momentum at short horizons (agents overreact to private signals, pushing prices beyond fundamentals) and reversal at long horizons (prices revert as public information arrives).
+The disposition effect (Restriction~48) predicts return continuation among stocks with large unrealized gains and return reversal among stocks with large unrealized losses, because investors' reluctance to realize losses impedes price adjustment.
+Extrapolative expectations (Restriction~49) model agents who weight recent returns too heavily when forming expectations, generating a specific functional form for the relationship between past returns and expected future returns.
+These three restrictions share momentum-related variables as inputs but predict different functional relationships between past returns and expected future returns.
+
+Investor sentiment (Restriction~50) operates at the aggregate level: the Baker--Wurgler sentiment index predicts that, conditional on high sentiment, speculative stocks (small, unprofitable, high-volatility) earn low subsequent returns, while safe stocks are largely unaffected.
+This generates a Type~C penalty where $F_{50,t}$ is the sentiment index and the loadings $\hat{\beta}_{i,50}$ are heterogeneous across stocks, depending on firm characteristics.
+Salience theory (Restriction~51) predicts mispricing at the individual asset level: stocks with salient (extreme) upside payoffs are overpriced because agents overweight the probability of salient outcomes, generating a negative relationship between salience and expected returns.
+
+
+%======================================================================
+\subsection{Macro-Finance and Term Structure Restrictions}\label{sub:macro_restrictions}
+%======================================================================
+
+Macro-finance models link expected returns on equities and bonds to macroeconomic state variables: the yield curve, inflation expectations, monetary policy, and consumption-wealth ratios.
+These restrictions enter as Type~B or Type~C penalties depending on whether the model implies a direct functional mapping from macro variables to expected returns (Type~B) or a factor structure driven by a macro factor (Type~C).
+
+\begin{table}[H]
+\centering
+\caption{Macro-Finance and Term Structure Restrictions}
+\label{tab:macro}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{c >{\raggedright\arraybackslash}p{3cm} >{\raggedright\arraybackslash}p{3cm} X}
+\toprule
+\# & Restriction & Source & Key Penalty Form \\
+\midrule
+52 & Affine term structure no-arbitrage
+   & \citep{duffiekan1996,angpiazzesi2003}
+   & Type~B: $g_{52}(\mathbf{y}_t)$; no-arbitrage restrictions on yield curve factors constrain equity risk premia via the state vector $\mathbf{y}_t$ \\[6pt]
+53 & Inflation risk premium
+   & \citep{bekaertengstrom2010}
+   & Type~C: $F_{53,t}$ = inflation risk premium from nominal-real yield spread; inflation uncertainty priced in equities \\[6pt]
+54 & Monetary policy / Taylor rule
+   & \citep{bernankekuttner2005}
+   & Type~B: $g_{54}(\Delta i_t^{\text{surprise}})$; surprise component of federal funds rate changes predicts equity returns \\[6pt]
+55 & Consumption-wealth ratio ($cay$)
+   & \citep{lettauludvigson2001}
+   & Type~B: $g_{55}(cay_t)$; cointegrating residual of consumption, asset wealth, and labor income predicts returns \\[6pt]
+56 & Credit spread / EBP
+   & \citep{gilchristzakrajsek2012}
+   & Type~C: $F_{56,t}$ = excess bond premium; credit market distress predicts equity returns via risk appetite channel \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The macro-finance restrictions link equity expected returns to macroeconomic and fixed-income state variables through five distinct channels.
+The affine term structure restriction (Restriction~52) imposes no-arbitrage across maturities, using the yield curve state vector $\mathbf{y}_t$ (level, slope, curvature, and potentially macro factors) to constrain the time-varying equity risk premium.
+This restriction is structurally different from the others because it derives from the bond market and imposes cross-market no-arbitrage.
+
+Restrictions~53--54 transmit monetary and inflation shocks to equity prices.
+The inflation risk premium (Restriction~53) uses the spread between nominal and real yields to extract the compensation investors demand for bearing inflation uncertainty; this premium predicts equity returns because inflation uncertainty covaries with real economic risk.
+The monetary policy restriction (Restriction~54) identifies the surprise component of federal funds rate decisions (using fed funds futures) and maps it to equity returns, exploiting the direct channel from policy rates to discount rates.
+
+Restrictions~55 and~56 use slow-moving macroeconomic aggregates.
+The consumption-wealth ratio $cay$ (Restriction~55) exploits cointegration among consumption, asset wealth, and labor income: when consumption is high relative to wealth, expected returns are high because the ratio mean-reverts through subsequent returns.
+The excess bond premium (Restriction~56) isolates the component of credit spreads that reflects risk appetite and financial intermediary health, net of default risk; it predicts equity returns because deteriorating credit conditions signal tightening financial constraints economy-wide.
+
+
+%======================================================================
+\subsection{Summary and Discussion}\label{sub:restriction_summary}
+%======================================================================
+
+The catalog comprises fifty-six restrictions organized into eight families.
+Each restriction imposes a distinct functional form on the mapping from observable characteristics $\mathbf{X}_{i,t}$ to expected returns $f(\mathbf{X}_{i,t})$, and each translates into a specific penalty functional $C_j(f)$ within the Theory-KRR objective~\eqref{eq:tikrr}.
+The penalties are heterogeneous in structure: Type~A penalties enforce Euler equation moment conditions and require specifying the SDF (Restrictions~1--13, 32--35, 46); Type~B penalties equate expected returns to functions of investment or macro variables through first-order conditions (Restrictions~14--23, 41, 43, 44--45, 47--49, 51--52, 54--55); Type~C penalties impose factor-structure restrictions driven by intermediary, sentiment, or macro factors (Restrictions~24--31, 36--37, 42, 50, 53, 56); and Type~D penalties enforce market-clearing equilibrium conditions from demand-system models (Restrictions~38--40).
+Despite this heterogeneity, the framework in Section~\ref{sec:framework} accommodates all fifty-six penalties within a single objective: each $C_j(f)$ depends on $f$ only through its evaluations at observed data points, the representer theorem applies, and cross-validation selects the vector $\bm{\mu}$ that balances predictive fit against theoretical guidance.
+
+A property of the catalog that makes the $\mu_j$ ranking meaningful is that many restrictions share observable input variables but impose different functional relationships.
+Consumption growth enters Restrictions~1--13 through thirteen different SDFs.
+Investment-to-capital ratio enters Restrictions~14--18 through five different adjustment cost specifications.
+Past returns enter Restrictions~47--49 through three different behavioral mechanisms.
+When two restrictions share inputs but one receives a higher $\mu_j$ in cross-validation, the data have identified which functional relationship between those inputs and expected returns is more empirically useful.
+This is the sense in which the cross-validated multipliers $\bm{\mu}$ produce a ranking of economic theories: they rank not just which state variables matter, but which \emph{economic mechanisms linking state variables to expected returns} are supported by the data.

@@ -1,0 +1,1 @@
+- [project_tikrr_conventions.md](project_tikrr_conventions.md) — Notation, labels, citation style, and restriction group structure for the Theory-KRR paper

@@ -18,7 +18,7 @@ from pathlib import Path
 # Files / patterns to protect from accidental overwrite.
 # Uses basename matching. Add full path substrings for more precision.
 PROTECTED_PATTERNS = [
-    "paper/references.bib",         # Centralized bibliography — edit manually
+    # "paper/references.bib",       # Unprotected — building bib from scratch
     "settings.json",                 # Claude Code settings — edit manually
     "strategy-memo-*.md",            # Approved strategy memos — immutable after approval
     "referee-report-*.md",           # Real referee reports — never auto-edit

@@ -1,0 +1,129 @@
+% Theories as Regularizers
+% Amedeo Andriollo and Juan F. Imbet
+% Paris Dauphine University - PSL
+
+\documentclass[12pt]{article}
+
+% ── Page layout ──────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\doublespacing
+
+% ── Mathematics ──────────────────────────────────────────────
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{bm}
+
+% ── Tables and figures ───────────────────────────────────────
+\usepackage{booktabs,tabularx,multirow,array}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption,subcaption}
+
+% ── Bibliography ─────────────────────────────────────────────
+\usepackage[authoryear,round]{natbib}
+\bibliographystyle{plainnat}
+
+% ── Cross-references and links ───────────────────────────────
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black,
+  pdfauthor={Amedeo Andriollo and Juan F. Imbet},
+  pdftitle={Theories as Regularizers}
+}
+\usepackage{cleveref}
+
+% ── Miscellaneous ────────────────────────────────────────────
+\usepackage{enumerate,enumitem}
+\usepackage{xcolor}
+\usepackage{dsfont}           % indicator function \mathds{1}
+
+% ── Theorem environments ────────────────────────────────────
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% ── Custom commands ──────────────────────────────────────────
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Hcal}{\mathcal{H}}
+\newcommand{\Kcal}{\mathcal{K}}
+\newcommand{\Fcal}{\mathcal{F}}
+\newcommand{\ind}{\mathds{1}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+% ══════════════════════════════════════════════════════════════
+%  Title
+% ══════════════════════════════════════════════════════════════
+
+\title{\textbf{Theories as Regularizers}\thanks{%
+We thank [acknowledgments].
+Andriollo: Paris Dauphine University -- PSL, \texttt{amedeo.andriollo@dauphine.psl.eu}.
+Imbet: Paris Dauphine University -- PSL, \texttt{juan.imbet@dauphine.psl.eu}.}}
+\author{Amedeo Andriollo \and Juan F.\ Imbet}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+% ── Abstract ─────────────────────────────────────────────────
+\begin{abstract}
+\begin{singlespace}
+\noindent
+Machine-learning methods for return prediction ignore economic theory. Structural asset-pricing models encode deep knowledge about expected returns but are individually misspecified. We let the data decide which theories help and how much. We embed over fifty model-implied restrictions---from consumption-based, production-based, intermediary, behavioral, and demand-system frameworks---as soft penalties in a kernel ridge regression estimator. Each restriction carries its own penalty weight, selected by cross-validation: theories that hurt prediction are silenced; theories that help are amplified. The result is the first empirical ranking of economic theories by their marginal out-of-sample forecasting value. Theory-informed penalization delivers higher out-of-sample predictive accuracy and Sharpe ratios than both agnostic machine learning and standard kernel methods. Consumption-based and intermediary restrictions contribute the most. Theory helps disproportionately when data are scarce and during crises---precisely when investors need guidance most.
+
+\medskip
+\noindent\textbf{JEL Classification:} G12, G17, C14, C52.
+
+\noindent\textbf{Keywords:} Asset pricing, kernel ridge regression, structural restrictions, machine learning, model selection.
+\end{singlespace}
+\end{abstract}
+
+\thispagestyle{empty}
+\newpage
+\setcounter{page}{1}
+
+% ══════════════════════════════════════════════════════════════
+%  Main body
+% ══════════════════════════════════════════════════════════════
+
+\input{sections/introduction}
+\input{sections/framework}
+\input{sections/restrictions}
+\input{sections/estimation}
+\input{sections/empirical}
+\input{sections/results}
+\input{sections/conclusion}
+
+% ══════════════════════════════════════════════════════════════
+%  References
+% ══════════════════════════════════════════════════════════════
+
+\newpage
+\bibliography{references}
+
+% ══════════════════════════════════════════════════════════════
+%  Appendix
+% ══════════════════════════════════════════════════════════════
+
+\newpage
+\appendix
+\input{appendix/proofs}
+\input{appendix/restriction_details}
+\input{appendix/additional_results}
+
+\end{document}

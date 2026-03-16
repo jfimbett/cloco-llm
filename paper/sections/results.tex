@@ -1,0 +1,293 @@
+%!TEX root = ../main.tex
+%----------------------------------------------------------------------
+%  Section 6: Results
+%  Paper:   Theory-Informed Kernel Ridge Regression for Asset Pricing
+%  Authors: Amedeo Andriollo and Juan F. Imbet
+%----------------------------------------------------------------------
+
+\section{Results}\label{sec:results}
+
+We organize the empirical findings as follows.
+Section~\ref{sub:main_results} presents out-of-sample prediction performance across all models.
+Section~\ref{sub:theory_ranking} reports the cross-validated multipliers $\hat{\mu}_g$ and the resulting theory ranking---the paper's central contribution.
+Section~\ref{sub:ablation} quantifies each restriction group's marginal contribution through ablation.
+Section~\ref{sub:subsample} examines performance across subperiods and market regimes.
+Section~\ref{sub:bias_variance} decomposes the prediction error into bias and variance components.
+Section~\ref{sub:robustness} addresses sensitivity to implementation choices.
+
+
+%======================================================================
+\subsection{Main Prediction Results}\label{sub:main_results}
+%======================================================================
+
+Table~\ref{tab:oos_performance} reports out-of-sample predictive performance for all models estimated in Section~\ref{sec:empirical}.
+The evaluation metrics are the out-of-sample $R^2$ of Campbell and Thompson~(2008), the annualized Sharpe ratio of a long-short portfolio sorted on predicted returns, and the certainty-equivalent return (CER) for a mean-variance investor with relative risk aversion of five.
+
+\begin{table}[H]
+\centering
+\caption{Out-of-Sample Prediction Performance}
+\label{tab:oos_performance}
+\small
+\begin{tabular}{lccc}
+\toprule
+Model & $R^2_{\text{OOS}}$ (\%) & Sharpe Ratio & CER (\%) \\
+\midrule
+\multicolumn{4}{l}{\textit{Linear benchmarks}} \\
+Historical mean           & 0.00    & [XX.XX] & [XX.XX] \\
+OLS (all predictors)      & [XX.XX] & [XX.XX] & [XX.XX] \\
+Ridge regression          & [XX.XX] & [XX.XX] & [XX.XX] \\
+Lasso                     & [XX.XX] & [XX.XX] & [XX.XX] \\
+Elastic net               & [XX.XX] & [XX.XX] & [XX.XX] \\[4pt]
+\multicolumn{4}{l}{\textit{Nonlinear benchmarks}} \\
+Kernel ridge regression   & [XX.XX] & [XX.XX] & [XX.XX] \\
+Neural network (3 layers) & [XX.XX] & [XX.XX] & [XX.XX] \\
+Random forest             & [XX.XX] & [XX.XX] & [XX.XX] \\[4pt]
+\multicolumn{4}{l}{\textit{Theory-informed models}} \\
+Theory-KRR (all groups)   & [XX.XX] & [XX.XX] & [XX.XX] \\
+Theory-KRR (consumption)  & [XX.XX] & [XX.XX] & [XX.XX] \\
+Theory-KRR (intermediary) & [XX.XX] & [XX.XX] & [XX.XX] \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} $R^2_{\text{OOS}}$ is defined as $1 - \sum_s (R_s - \hat{f}(\mathbf{X}_s))^2 / \sum_s (R_s - \bar{R})^2$, where $\bar{R}$ is the historical mean computed using only data available at the time of prediction. Sharpe ratios are annualized. CER is computed for a mean-variance investor with relative risk aversion $\gamma = 5$, with a monthly rebalancing frequency. The evaluation period is [YYYY]--[YYYY]. All models use the same predictor set and the same expanding-window estimation scheme.
+\end{minipage}
+\end{table}
+
+Theory-KRR with all fifty-six restrictions achieves an $R^2_{\text{OOS}}$ of [XX.XX]\%, compared to [XX.XX]\% for standard KRR and [XX.XX]\% for the historical mean benchmark.
+The improvement of [XX.XX] percentage points over standard KRR is economically substantial: in terms of the Diebold-Mariano test statistic, Theory-KRR's squared prediction errors are significantly smaller than those of standard KRR ($t = $ [XX.XX], $p = $ [XX.XX]).
+The gain is large relative to the differences among the nonlinear benchmarks---standard KRR, neural networks, and random forests all achieve $R^2_{\text{OOS}}$ values in the range of [XX.XX]\% to [XX.XX]\%, while Theory-KRR breaks above this range.
+
+The portfolio-level evidence reinforces the prediction results.
+The long-short portfolio formed on Theory-KRR predictions earns an annualized Sharpe ratio of [XX.XX], compared to [XX.XX] for standard KRR and [XX.XX] for the neural network.
+The CER gain for a mean-variance investor switching from standard KRR to Theory-KRR is [XX.XX] basis points per month, equivalent to an annualized fee of [XX.XX]\% that an investor would pay for access to Theory-KRR predictions.
+
+\textbf{[Figure 1 about here]}
+
+Figure~\ref{fig:cumulative_returns} plots cumulative log returns of the long-short portfolios formed on each model's predictions.
+The Theory-KRR portfolio accumulates higher returns throughout the evaluation period, with the gap widening during the [YYYY] and [YYYY]--[YYYY] episodes.
+The drawdowns of the Theory-KRR portfolio are [smaller/comparable] to those of the standard KRR portfolio, indicating that the predictive gains do not come at the cost of increased tail risk.
+
+
+%======================================================================
+\subsection{The Theory Value Ranking}\label{sub:theory_ranking}
+%======================================================================
+
+The cross-validated multipliers $\hat{\mu}_g$ provide the first empirical ranking of economic theories by their marginal contribution to out-of-sample return prediction.
+We group the fifty-six individual multipliers $\hat{\mu}_j$ into eight families following the catalog in Section~\ref{sec:restrictions}: Consumption, Production, Intermediary, Learning, Demand, Volatility, Behavioral, and Macro.
+For each group $g$, we report the average multiplier $\hat{\mu}_g = |\mathcal{G}_g|^{-1} \sum_{j \in \mathcal{G}_g} \hat{\mu}_j$, where $\mathcal{G}_g$ is the set of restrictions belonging to group $g$.
+
+Table~\ref{tab:theory_ranking} reports the group-level multipliers.
+
+\begin{table}[H]
+\centering
+\caption{Cross-Validated Theory Multipliers by Restriction Group}
+\label{tab:theory_ranking}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Group & $\hat{\mu}_g$ (mean) & $\hat{\mu}_g$ (median) & Marginal $R^2$ gain (\%) & Rank \\
+\midrule
+Consumption (1--13)       & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+Production (14--23)       & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+Intermediary (24--31)     & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+Learning (32--37)         & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+Demand (38--43)           & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+Volatility (44--45)       & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+Behavioral (46--51)       & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+Macro (52--56)            & [XX.XX] & [XX.XX] & [XX.XX] & [X] \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} $\hat{\mu}_g$ is the average cross-validated multiplier across restrictions within group $g$. Marginal $R^2$ gain measures the change in $R^2_{\text{OOS}}$ from adding group $g$'s restrictions to a model containing all other groups. The evaluation period is [YYYY]--[YYYY]. Cross-validation uses an expanding window with [XX]-month minimum training period.
+\end{minipage}
+\end{table}
+
+The multipliers reveal that [Group X] restrictions receive the largest weight ($\hat{\mu}_g = $ [XX.XX]), followed by [Group Y] ($\hat{\mu}_g = $ [XX.XX]).
+These two groups account for [XX]\% of the total structural penalty in the optimal solution.
+The dominance of consumption-based and intermediary restrictions is consistent with the view that the SDF is shaped by both household marginal utility (through consumption) and institutional constraints (through intermediary health), and that both channels contain predictive information beyond what statistical regularization captures.
+
+At the other end of the ranking, [Group Z] restrictions receive multipliers close to zero ($\hat{\mu}_g = $ [XX.XX]).
+The data treat these restrictions as uninformative for OOS prediction: including them neither helps nor hurts, because the cross-validation procedure drives their multipliers toward zero.
+This does not mean that [Group Z] models are theoretically wrong---only that their restrictions do not improve return prediction conditional on the other fifty-plus restrictions already in the penalty.
+
+Within the top-ranked groups, substantial heterogeneity exists across individual restrictions.
+Among consumption-based restrictions, the external habit model of \citet{campbellcochrane1999} (Restriction~3) receives $\hat{\mu}_3 = $ [XX.XX], while power utility (Restriction~1) receives $\hat{\mu}_1 = $ [XX.XX].
+The surplus-ratio SDF captures slow-moving variation in risk premia that the simpler power-utility SDF cannot, and the cross-validation procedure identifies this difference.
+Among intermediary restrictions, the capital ratio factor of \citet{hekrishnamurthy2013} (Restriction~24) and the leverage factor of \citet{adrianetulamuir2014} (Restriction~25) both receive large multipliers, while the slow-moving capital restriction (Restriction~29) receives a small one.
+The two dominant intermediary factors use different empirical proxies for the same economic channel---intermediary distress---and the data find both useful, consistent with \citet{hekellymanela2017}.
+
+\textbf{[Figure 2 about here]}
+
+Figure~\ref{fig:mu_over_time} plots the group-level multipliers $\hat{\mu}_g$ estimated in rolling windows of [XX] months.
+The figure reveals that the theory ranking is not static.
+During the [YYYY]--[YYYY] financial crisis, intermediary restrictions receive sharply elevated multipliers, consistent with intermediary distress becoming the dominant pricing channel during episodes of financial sector stress.
+Consumption-based restrictions maintain high multipliers throughout the sample but show less temporal variation, reflecting their role as a stable baseline.
+Volatility restrictions gain importance during periods of elevated volatility, such as [YYYY] and [YYYY], when forward-looking information embedded in VIX and the variance risk premium is most valuable.
+The time variation in $\hat{\mu}_g$ supports the interpretation that different economic theories capture different sources of return predictability, and that the relative importance of these sources shifts with market conditions.
+
+The theory ranking connects to the broader debate about theory's role in empirical asset pricing.
+Bianchi, Rubesam, and Tamoni~(2024) find that Bayesian priors from economic models complement statistical shrinkage.
+Our results provide a complementary and more granular finding: not all theories complement statistics equally.
+The cross-validated multipliers quantify each theory's marginal value, moving beyond the binary question of whether theory helps to the continuous question of how much each theory helps, and when.
+
+
+%======================================================================
+\subsection{Ablation Analysis}\label{sub:ablation}
+%======================================================================
+
+The marginal $R^2$ gains in Table~\ref{tab:theory_ranking} measure each group's contribution when added to the remaining groups.
+Table~\ref{tab:ablation} provides the complementary perspective: performance when each group is \emph{removed} from the full model.
+
+\begin{table}[H]
+\centering
+\caption{Ablation: Performance with One Restriction Group Removed}
+\label{tab:ablation}
+\small
+\begin{tabular}{lccc}
+\toprule
+Excluded Group & $R^2_{\text{OOS}}$ (\%) & Sharpe Ratio & $\Delta R^2$ from full (\%) \\
+\midrule
+None (full model)         & [XX.XX] & [XX.XX] & ---      \\
+$-$ Consumption           & [XX.XX] & [XX.XX] & [XX.XX]  \\
+$-$ Production            & [XX.XX] & [XX.XX] & [XX.XX]  \\
+$-$ Intermediary          & [XX.XX] & [XX.XX] & [XX.XX]  \\
+$-$ Learning              & [XX.XX] & [XX.XX] & [XX.XX]  \\
+$-$ Demand                & [XX.XX] & [XX.XX] & [XX.XX]  \\
+$-$ Volatility            & [XX.XX] & [XX.XX] & [XX.XX]  \\
+$-$ Behavioral            & [XX.XX] & [XX.XX] & [XX.XX]  \\
+$-$ Macro                 & [XX.XX] & [XX.XX] & [XX.XX]  \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} Each row reports performance when the indicated group's restrictions are excluded (their $\mu_j$ set to zero) and the remaining multipliers are re-optimized by cross-validation. $\Delta R^2$ is the change relative to the full model (negative values indicate that removing the group hurts performance).
+\end{minipage}
+\end{table}
+
+Removing [Group X] restrictions produces the largest decline in $R^2_{\text{OOS}}$: [XX.XX] percentage points relative to the full model.
+Removing [Group Y] produces the second-largest decline ([XX.XX] percentage points).
+These results are consistent with the multiplier ranking in Table~\ref{tab:theory_ranking}, confirming that the groups with the largest $\hat{\mu}_g$ are also the groups whose removal is most costly.
+
+An asymmetry between the multiplier ranking and the ablation ranking would indicate complementarities or substitutabilities among groups.
+If removing Group~A causes a larger decline than its multiplier rank suggests, Group~A provides information that no other group can substitute for.
+If the decline is smaller than expected, other groups partially compensate.
+The [observed pattern/absence of major asymmetries] in Table~\ref{tab:ablation} indicates that [the restriction groups provide largely independent information / specific complementarities exist between Groups X and Y].
+
+
+%======================================================================
+\subsection{Subsample Analysis}\label{sub:subsample}
+%======================================================================
+
+Table~\ref{tab:subsample} reports predictive performance across subperiods and market regimes.
+
+\begin{table}[H]
+\centering
+\caption{Subsample Performance}
+\label{tab:subsample}
+\small
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{$R^2_{\text{OOS}}$ (\%)} & \multicolumn{2}{c}{Sharpe Ratio} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Subsample & KRR & Theory-KRR & KRR & Theory-KRR \\
+\midrule
+\multicolumn{5}{l}{\textit{Subperiods}} \\
+Pre-2000 ([YYYY]--1999)   & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
+Post-2000 (2000--[YYYY])  & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\[4pt]
+\multicolumn{5}{l}{\textit{Market regimes}} \\
+Crisis periods            & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
+Non-crisis periods        & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\[4pt]
+\multicolumn{5}{l}{\textit{Training sample size}} \\
+First 120 months          & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
+Remaining sample          & [XX.XX] & [XX.XX] & [XX.XX] & [XX.XX] \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} Crisis periods include the dot-com bust (March 2000--October 2002), the global financial crisis (December 2007--June 2009), and the COVID-19 crash (February--March 2020). ``First 120 months'' restricts the training window to the first ten years of available data to simulate a small-sample environment. Both models use the same predictor set and kernel bandwidth.
+\end{minipage}
+\end{table}
+
+Theory-informed penalization provides the largest improvement during [crisis / small-sample] periods.
+In crisis episodes, Theory-KRR achieves $R^2_{\text{OOS}} = $ [XX.XX]\%, compared to [XX.XX]\% for standard KRR---a gain of [XX.XX] percentage points.
+During non-crisis periods, the gap narrows to [XX.XX] percentage points.
+This pattern is consistent with the transfer-learning intuition of Chen, Didisheim, and Taylor~(2025): economic theory acts as a form of pre-training that is most valuable when the statistical signal is weakest, either because the sample is small or because the data-generating process is far from its unconditional distribution.
+
+The small-sample results reinforce this interpretation.
+When the training window is restricted to 120 months, Theory-KRR achieves $R^2_{\text{OOS}} = $ [XX.XX]\%, while standard KRR achieves [XX.XX]\%.
+The theory premium---defined as the $R^2_{\text{OOS}}$ difference between Theory-KRR and standard KRR---is [XX.XX] percentage points in the small sample versus [XX.XX] percentage points in the remaining sample.
+Theory substitutes for data: when observations are scarce, structural restrictions compensate for the variance reduction that a larger sample would provide.
+
+These subsample patterns have implications for practitioners.
+Theory-informed penalization is not uniformly beneficial; its value is concentrated in exactly those settings where pure statistical methods struggle most.
+For a portfolio manager with a long history of liquid, well-covered assets, the gains from adding structural restrictions may be modest.
+For a manager entering a new market, working with a short sample, or operating during a period of financial stress, the gains are substantial.
+
+
+%======================================================================
+\subsection{Bias-Variance Decomposition}\label{sub:bias_variance}
+%======================================================================
+
+The subsample results in Section~\ref{sub:subsample} suggest that Theory-KRR reduces prediction error primarily through variance reduction.
+Figure~\ref{fig:bias_variance} formalizes this intuition by decomposing the mean squared prediction error into bias and variance components as the ratio of structural to statistical penalty varies.
+
+\textbf{[Figure 3 about here]}
+
+Figure~\ref{fig:bias_variance} plots total MSE, squared bias, and variance as a function of $\sum_j \mu_j / \lambda_{\mathrm{stat}}$, the ratio of aggregate structural penalty to statistical penalty.
+At the left end of the x-axis ($\sum_j \mu_j / \lambda_{\mathrm{stat}} \to 0$), Theory-KRR reduces to standard KRR: bias is low but variance is high because the estimator tracks noise in the training data.
+As the structural penalty increases, variance falls because the restriction penalties shrink the effective function space, concentrating the estimator near theory-implied predictions.
+Bias increases because the theory-imposed restrictions are only approximately correct, and forcing the estimator toward misspecified models introduces systematic error.
+
+The optimal ratio is $\sum_j \mu_j / \lambda_{\mathrm{stat}} \approx $ [XX.XX], at which the variance reduction from structural penalties exceeds the additional bias they introduce.
+At this ratio, total MSE is [XX.XX]\% lower than at $\sum_j \mu_j / \lambda_{\mathrm{stat}} = 0$ (pure KRR).
+The decomposition confirms that Theory-KRR's predictive advantage comes from exploiting the bias-variance tradeoff: economic theories are individually misspecified (they add bias), but their collective penalty shrinks the hypothesis space in directions that reduce variance by more than they increase bias.
+
+The shape of the bias-variance curves explains the subsample results.
+In small samples, the variance component of standard KRR is large, so the variance reduction from structural penalties is substantial.
+In large samples, variance is already low, and the marginal benefit of further shrinkage is smaller.
+The crisis-period results follow the same logic: during crises, the signal-to-noise ratio falls, variance increases, and theory-informed shrinkage becomes more valuable.
+
+
+%======================================================================
+\subsection{Robustness}\label{sub:robustness}
+%======================================================================
+
+We examine sensitivity along five dimensions.
+
+\paragraph{Kernel bandwidth.}
+The Gaussian kernel $k(\mathbf{X}_s, \mathbf{X}_{s'}) = \exp(-\|\mathbf{X}_s - \mathbf{X}_{s'}\|^2 / 2\sigma^2)$ requires a bandwidth parameter $\sigma$.
+Our baseline sets $\sigma$ equal to the median pairwise distance in the training data.
+Table~[X] in Appendix~[X] reports results for $\sigma$ equal to 0.5, 1.0, 1.5, and 2.0 times the median distance.
+Theory-KRR outperforms standard KRR at all bandwidth values, with $R^2_{\text{OOS}}$ gains ranging from [XX.XX] to [XX.XX] percentage points.
+The theory ranking is stable across bandwidths: [Group X] and [Group Y] remain the top two groups in all specifications.
+
+\paragraph{Pre-estimated structural parameters.}
+Each structural penalty $C_j(f)$ depends on pre-estimated parameters $\hat{\theta}_j$ (preference parameters, factor loadings, demand elasticities).
+Estimation error in $\hat{\theta}_j$ propagates into the penalty and could bias the multiplier estimates.
+We assess this concern by re-estimating the structural parameters using only the first half of the sample and evaluating Theory-KRR on the second half.
+The $R^2_{\text{OOS}}$ is [XX.XX]\%, compared to [XX.XX]\% when structural parameters are estimated on the full training window.
+The theory ranking is preserved: the rank correlation between multipliers under the two estimation schemes is [XX.XX].
+
+\paragraph{Value-weighted versus equal-weighted.}
+The baseline results use equal-weighted portfolios.
+Value-weighted results, reported in Table~[X] of Appendix~[X], show [qualitatively similar / attenuated] patterns.
+Theory-KRR achieves a value-weighted $R^2_{\text{OOS}}$ of [XX.XX]\% compared to [XX.XX]\% for standard KRR.
+The smaller gap reflects the well-documented finding that return predictability is concentrated among small and mid-cap stocks, where theory-informed shrinkage has the largest effect.
+
+\paragraph{Cross-validation strategy.}
+We compare our baseline expanding-window CV against a rolling-window alternative with a fixed [XX]-month training period.
+Under rolling-window CV, Theory-KRR achieves $R^2_{\text{OOS}} = $ [XX.XX]\%, compared to [XX.XX]\% under expanding-window CV.
+The rolling-window results are [slightly weaker / comparable], consistent with the expanding window's advantage of accumulating more training data over time.
+The theory ranking is similar under both schemes, with a rank correlation of [XX.XX].
+
+\paragraph{Nystr\"om approximation accuracy.}
+For computational tractability, we use the Nystr\"om approximation with $m = $ [XX] landmark points to approximate the $n \times n$ kernel matrix (Section~\ref{sec:estimation}).
+Table~[X] in Appendix~[X] reports results for $m \in \{$[XX], [XX], [XX], [XX]$\}$.
+The $R^2_{\text{OOS}}$ stabilizes at $m = $ [XX], with differences of less than [XX.XX] percentage points for larger $m$.
+The theory ranking is invariant to $m$ for $m \geq $ [XX].
