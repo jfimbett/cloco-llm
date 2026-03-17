@@ -83,15 +83,12 @@ All other macro variables cover the full 1963--2023 sample period.
 \subsection{Baseline Models}\label{sub:baselines}
 %======================================================================
 
-We compare Theory-KRR against five baseline models spanning the spectrum from simple linear methods to a flexible nonparametric estimator.
+We compare Theory-KRR against eight baseline models spanning the spectrum from simple linear methods through polynomial expansions to a flexible nonparametric estimator.
 All baselines use the same data, the same rolling-window procedure described in Section~\ref{sub:cv_strategy}, and the same temporal cross-validation for hyperparameter selection.
 This ensures that performance differences reflect the models' functional form and regularization, not differences in data or evaluation protocol.
+All models use the full set of firm-level characteristics and macroeconomic state variables as predictors.
 
 \begin{enumerate}[label=\arabic*.]
-\item \textbf{Historical mean.}
-The simplest benchmark: $\hat{f}(\mathbf{X}_{i,t}) = \bar{R}$, the pooled cross-sectional average of excess returns in the training sample.
-This is the natural benchmark for $R^2_{\mathrm{OOS}}$, which measures improvement over the historical mean.
-
 \item \textbf{OLS.}
 Linear regression of next-month excess returns on the full vector of characteristics: $\hat{f}(\mathbf{X}_{i,t}) = \hat{\bm{\beta}}^{\top}\mathbf{X}_{i,t}$.
 OLS is prone to overfitting in small training samples but provides a benchmark for the value of regularization and nonlinearity.
@@ -110,11 +107,23 @@ The regularization path is computed by coordinate descent \citep{friedman2010reg
 A convex combination of $\ell_1$ and $\ell_2$ penalties with mixing parameter $\alpha = 0.5$.
 The regularization path and $\lambda$ selection follow the same procedure as the Lasso.
 
+\item \textbf{Polynomial models (degree 2).}
+Ridge, Lasso, and Elastic Net applied to degree-2 polynomial features: for each predictor $X_k$, we include $X_k^2$ and all pairwise interactions $X_k X_l$ ($k < l$).
+This expansion captures nonlinearities and interactions within a linear estimation framework, providing a benchmark for whether the kernel's implicit infinite-dimensional feature map adds value beyond explicit low-order interactions.
+
 \item \textbf{Standard KRR.}
 The Gaussian kernel ridge regression estimator with RKHS-norm regularization only: this is Theory-KRR with all $\mu_j = 0$.
 Standard KRR captures nonlinearities and interactions through the Gaussian kernel but receives no guidance from economic theory.
 Comparing Theory-KRR to standard KRR isolates the marginal contribution of the structural penalties.
 \end{enumerate}
+
+We estimate two variants of Theory-KRR that differ in the role of statistical regularization:
+\begin{itemize}
+\item \textbf{Theory-KRR ($\lambda = 0$):} The statistical penalty $\lambda_{\mathrm{stat}}$ is set to zero, so the model relies entirely on the structural penalties $\mu_j C_j(f)$ for regularization.
+The cross-validation procedure selects the multiplier vector $\bm{\mu}$ subject to the constraint that at least one $\mu_g > 0$ (pure theory-guided shrinkage).
+\item \textbf{Theory-KRR ($\lambda = \lambda^*$):} Both the statistical penalty $\lambda_{\mathrm{stat}}$ and the structural multipliers $\bm{\mu}$ are selected jointly by cross-validation.
+This is the fully flexible specification that nests standard KRR as a special case (when all $\mu_j = 0$).
+\end{itemize}
 
 %======================================================================
 \subsection{Evaluation Metrics}\label{sub:evaluation}

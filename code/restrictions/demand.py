@@ -1,5 +1,5 @@
 """
-Type D: Demand-system restrictions (#38-43).
+Type C: Demand-system restrictions (#38-43).
 
 Based on Koijen-Yogo (2019) demand-system asset pricing,
 Gabaix-Koijen-Richmond-Yogo (2024) asset embeddings,

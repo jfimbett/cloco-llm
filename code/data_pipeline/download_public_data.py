@@ -1,7 +1,7 @@
 """
 Download public datasets for Theory-Informed KRR project.
 
-Downloads 7 publicly available datasets to data/raw/:
+Downloads 7 publicly available datasets to ../data/raw/:
   - Kenneth French factors (FF5 + Momentum)
   - NIPA consumption series (from FRED)
   - FRED macro series
@@ -433,7 +433,7 @@ def main():
     print("\n[NOTE] The following datasets are NOT auto-downloadable:")
     print("  - Lettau-Ludvigson cay: website returns 404; provide manually")
     print("  - Baker-Wurgler Sentiment: JS-heavy site, no direct CSV; provide manually")
-    print("  Place these in data/raw/ as cay.csv and sentiment.csv respectively.")
+    print("  Place these in ../data/raw/ as cay.csv and sentiment.csv respectively.")
 
     return 0 if not failures else 1
 

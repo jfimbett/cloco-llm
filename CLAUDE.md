@@ -50,8 +50,8 @@ These are read by `code/config.py` and applied in `data_loader.py` and all estim
 │   ├── online-appendix/        # Online appendix materials, if any
 │   └── styles/                 # LaTeX style files, if any
 ├── talks/                      # Presentation materials 
-├── data/                       # Raw and processed data files
-│   ├── raw/                    # Unprocessed data if applicable, data can be stored somewhere else if too large
+├── ../data/                    # Raw and processed data files (one level above project root)
+│   ├── raw/                    # Unprocessed data
 │   └── processed/              # Cleaned and analysis-ready data
 ├── output/                     # Intermediate results, logs and temp files.
 ├── replication/                # Replication package materials

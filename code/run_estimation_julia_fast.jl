@@ -2,8 +2,10 @@
 GPU + multicore Bayesian optimization for Theory-KRR — Julia implementation.
 Uses Nystrom approximation for speed regardless of data size.
 
+OPTIMIZED VERSION — see # OPT: comments for all changes.
+
 Run:
-    julia --threads=auto code/run_bayesian_cv.jl
+    julia --threads=auto code/run_estimation_julia_fast.jl
 
 Exploits:
   - CUDA GPU for kernel computation
@@ -130,28 +132,46 @@ end
 #  Kernel functions
 # ════════════════════════════════════════════════════════════════════
 
+# OPT B1: Pre-allocate dists, @inbounds, avoid per-element sqrt, use @view for subsample
 function median_heuristic(X::Matrix{Float64}; subsample::Int=5000)
     n = size(X, 1)
     if n > subsample
         idx = randperm(n)[1:subsample]
-        X = X[idx, :]
+        X = @view X[idx, :]  # OPT: view instead of copy
     end
-    dists = Float64[]
-    for i in 1:size(X,1), j in (i+1):size(X,1)
-        push!(dists, sqrt(sum((X[i,:] .- X[j,:]).^2)))
+    n = size(X, 1)
+    n_pairs = n * (n - 1) ÷ 2
+    sq_dists = Vector{Float64}(undef, n_pairs)  # OPT: pre-allocate instead of push!
+    k = 0
+    @inbounds for i in 1:n, j in (i+1):n  # OPT: @inbounds
+        d2 = 0.0
+        for p in 1:size(X, 2)
+            diff = X[i, p] - X[j, p]
+            d2 += diff * diff
+        end
+        k += 1
+        sq_dists[k] = d2
     end
-    return median(dists)
+    return sqrt(median(@view sq_dists[1:k]))  # OPT: sqrt only once on median
 end
 
+# OPT B2: Use abs2 for norms, in-place broadcast fusion
 function _sq_dists(X::Matrix{Float64}, Y::Matrix{Float64})
-    norms_x = sum(X.^2, dims=2)
-    norms_y = sum(Y.^2, dims=2)
-    return norms_x .+ norms_y' .- 2 * X * Y'
+    norms_x = vec(sum(abs2, X, dims=2))  # OPT: abs2 instead of X.^2
+    norms_y = vec(sum(abs2, Y, dims=2))  # OPT: abs2 instead of Y.^2
+    D = -2.0 .* (X * Y')  # OPT: single alloc for matmul
+    D .+= norms_x         # OPT: in-place broadcast fusion
+    D .+= norms_y'        # OPT: in-place broadcast fusion
+    return D
 end
 
+# OPT B3: In-place scale and fused exp broadcast
 function gaussian_rbf(X::Matrix{Float64}, Y::Matrix{Float64}; sigma::Float64=1.0)
     gamma = 1.0 / (2.0 * sigma^2)
-    return exp.(-gamma .* _sq_dists(X, Y))
+    K = _sq_dists(X, Y)
+    K .*= -gamma       # OPT: in-place scale
+    @. K = exp(K)       # OPT: fused broadcast exp
+    return K
 end
 
 function gaussian_rbf_gpu(X::Matrix{Float64}, Y::Matrix{Float64}; sigma::Float64=1.0)
@@ -180,14 +200,17 @@ KRR with Nystrom:
     β = (Z'Z + nλI_m)^{-1} Z' y     (m×m solve)
     predictions = Z_new @ β           (cheap)
 """
+# OPT B7: Added K_mm_inv_sqrt field to cache eigendecomp for nystrom_transform
 struct NystromFeatures
     Z_tr::Matrix{Float64}     # (n_tr, m) training features
     Z_val::Matrix{Float64}    # (n_val, m) validation features
     sigma::Float64
     m::Int
     landmarks::Matrix{Float64}
+    K_mm_inv_sqrt::Matrix{Float64}  # OPT: cached for nystrom_transform
 end
 
+# OPT B4: Extract K_mm from K_nm rows to avoid double computation
 function compute_nystrom(
     X_tr::Matrix{Float64}, X_val::Matrix{Float64};
     sigma::Float64=1.0, m::Int=500, has_gpu::Bool=false,
@@ -202,11 +225,11 @@ function compute_nystrom(
     # Compute kernel blocks
     if has_gpu
         K_nm = gaussian_rbf_gpu(X_tr, landmarks; sigma=sigma)      # n × m
-        K_mm = gaussian_rbf_gpu(landmarks, landmarks; sigma=sigma)  # m × m
+        K_mm = collect(@view K_nm[idx, :])  # OPT: extract K_mm from K_nm rows (landmarks ⊂ training), need owned copy for eigen
         K_vm = gaussian_rbf_gpu(X_val, landmarks; sigma=sigma)      # n_val × m
     else
         K_nm = gaussian_rbf(X_tr, landmarks; sigma=sigma)
-        K_mm = gaussian_rbf(landmarks, landmarks; sigma=sigma)
+        K_mm = K_nm[idx, :]  # OPT: avoid recomputing K(landmarks, landmarks)
         K_vm = gaussian_rbf(X_val, landmarks; sigma=sigma)
     end
 
@@ -219,21 +242,25 @@ function compute_nystrom(
     Z_tr = K_nm * K_mm_inv_sqrt    # (n, m)
     Z_val = K_vm * K_mm_inv_sqrt   # (n_val, m)
 
-    return NystromFeatures(Z_tr, Z_val, sigma, m_actual, landmarks)
+    return NystromFeatures(Z_tr, Z_val, sigma, m_actual, landmarks, K_mm_inv_sqrt)  # OPT: pass cached K_mm_inv_sqrt
 end
 
 # ════════════════════════════════════════════════════════════════════
 #  KRR with Nystrom (fast: m×m solve instead of n×n)
 # ════════════════════════════════════════════════════════════════════
 
+# OPT B5: Pre-allocate ZtZ, use mul! for in-place matmul, inplace diagonal update
 function nystrom_krr_solve(Z::Matrix{Float64}, y::Vector{Float64}, λ::Float64)
     n = length(y)
     m = size(Z, 2)
     # β = (Z'Z + nλI_m)^{-1} Z' y — this is an m×m system
-    ZtZ = Z' * Z
-    A = ZtZ + n * λ * I(m)
+    ZtZ = Matrix{Float64}(undef, m, m)  # OPT: pre-allocate
+    mul!(ZtZ, Z', Z)                     # OPT: in-place mul
+    @inbounds for i in 1:m               # OPT: in-place diagonal update instead of + n*λ*I(m)
+        ZtZ[i, i] += n * λ
+    end
     Zty = Z' * y
-    β = cholesky(Symmetric(A)) \ Zty
+    β = cholesky(Symmetric(ZtZ)) \ Zty
     return β
 end
 
@@ -259,14 +286,19 @@ function fit_predict_ridge(X_tr, y_tr, X_val, y_val, X_te)
     X1 = hcat(ones(n), X_tr)
     Xv1 = hcat(ones(size(X_val, 1)), X_val)
     Xt1 = hcat(ones(size(X_te, 1)), X_te)
+    # OPT B19: Cache Gram matrix for ridge CV
+    XtX = X1' * X1
+    Xty = X1' * y_tr
     best_mse = Inf
     best_beta = zeros(p + 1)
     for log_lam in range(-4, 2, length=20)
         lam = 10.0^log_lam
         # Don't penalize intercept
-        D = lam * I(p + 1)
-        D[1, 1] = 0.0
-        beta = (X1' * X1 + n * D) \ (X1' * y_tr)
+        A = copy(XtX)  # OPT: copy cached Gram matrix
+        @inbounds for i in 2:(p+1)
+            A[i, i] += n * lam
+        end
+        beta = A \ Xty
         mse = mean((y_val .- Xv1 * beta).^2)
         if mse < best_mse
             best_mse = mse
@@ -320,39 +352,36 @@ function fit_predict_elasticnet(X_tr, y_tr, X_val, y_val, X_te)
     return X_te * beta .+ a0
 end
 
+# OPT B6: Use @inbounds, @views, @. for column operations
 """Expand X to degree-2 polynomial features: original + squares + interactions."""
 function poly_features_deg2(X::Matrix{Float64})
     n, p = size(X)
     n_new = p + p * (p - 1) ÷ 2
     X_poly = Matrix{Float64}(undef, n, p + n_new)
-    X_poly[:, 1:p] = X
+    @views X_poly[:, 1:p] .= X  # OPT: view + broadcast
     col = p + 1
-    for i in 1:p
-        X_poly[:, col] = X[:, i] .^ 2
+    @inbounds for i in 1:p  # OPT: @inbounds
+        @. X_poly[:, col] = X[:, i]^2
         col += 1
     end
-    for i in 1:p
+    @inbounds for i in 1:p
         for j in (i+1):p
-            X_poly[:, col] = X[:, i] .* X[:, j]
+            @. X_poly[:, col] = X[:, i] * X[:, j]
             col += 1
         end
     end
     return X_poly
 end
 
-"""Compute Nystrom features for new data using stored landmarks and sigma."""
-function nystrom_transform(X_new::Matrix{Float64}, landmarks::Matrix{Float64},
-                           sigma::Float64; has_gpu::Bool=false)
+# OPT B7/B14: Use cached K_mm_inv_sqrt from NystromFeatures, removing per-call eigen
+"""Compute Nystrom features for new data using stored landmarks, sigma, and cached K_mm_inv_sqrt."""
+function nystrom_transform(X_new::Matrix{Float64}, nys::NystromFeatures; has_gpu::Bool=false)
     if has_gpu
-        K_new_m = gaussian_rbf_gpu(X_new, landmarks; sigma=sigma)
+        K_new_m = gaussian_rbf_gpu(X_new, nys.landmarks; sigma=nys.sigma)
     else
-        K_new_m = gaussian_rbf(X_new, landmarks; sigma=sigma)
+        K_new_m = gaussian_rbf(X_new, nys.landmarks; sigma=nys.sigma)
     end
-    K_mm = gaussian_rbf(landmarks, landmarks; sigma=sigma)
-    eig = eigen(Symmetric(K_mm))
-    vals = max.(eig.values, 1e-10)
-    K_mm_inv_sqrt = eig.vectors * Diagonal(1.0 ./ sqrt.(vals)) * eig.vectors'
-    return K_new_m * K_mm_inv_sqrt
+    return K_new_m * nys.K_mm_inv_sqrt  # OPT: use cached K_mm_inv_sqrt instead of recomputing eigen
 end
 
 # ════════════════════════════════════════════════════════════════════
@@ -380,19 +409,32 @@ function build_managed_portfolios(df::DataFrame, chars::Vector{String};
                      [Symbol(c) for c in extra_carry if hasproperty(df, Symbol(c))])
     all_carry = unique(all_carry)
 
-    out_yyyymm = Int[]
-    out_port_id = String[]
-    out_port_ret = Float64[]
-    out_cols = Dict(s => Float64[] for s in all_carry)
+    # OPT B8: Pre-estimate capacity for push! arrays
+    est_capacity = length(months) * (1 + length(chars) * 5)
+    out_yyyymm = Int[];       sizehint!(out_yyyymm, est_capacity)
+    out_port_id = String[];   sizehint!(out_port_id, est_capacity)
+    out_port_ret = Float64[]; sizehint!(out_port_ret, est_capacity)
+    out_cols = Dict(s => begin v = Float64[]; sizehint!(v, est_capacity); v end for s in all_carry)
 
+    # OPT B8/B20: Direct mean computation instead of collect(skipmissing(...))
     function _push_row!(ym, pid, ret, mdf_sub)
         push!(out_yyyymm, ym)
         push!(out_port_id, pid)
         push!(out_port_ret, ret)
         for s in all_carry
             if hasproperty(mdf_sub, s)
-                v = collect(skipmissing(mdf_sub[!, s]))
-                push!(out_cols[s], isempty(v) ? 0.0 : mean(v))
+                col = mdf_sub[!, s]
+                # OPT: direct mean over non-missing instead of collect(skipmissing(...))
+                total = 0.0
+                count = 0
+                @inbounds for k in 1:length(col)
+                    v = col[k]
+                    if !ismissing(v)
+                        total += Float64(v)
+                        count += 1
+                    end
+                end
+                push!(out_cols[s], count > 0 ? total / count : 0.0)
             else
                 push!(out_cols[s], 0.0)
             end
@@ -403,9 +445,18 @@ function build_managed_portfolios(df::DataFrame, chars::Vector{String};
         mdf = df[df.yyyymm .== m, :]
         nrow(mdf) == 0 && continue
 
-        ret_vals = collect(skipmissing(mdf.RET))
-        isempty(ret_vals) && continue
-        _push_row!(m, "MKT_EW", mean(ret_vals), mdf)
+        # OPT B20: Direct mean over non-missing returns instead of collect(skipmissing(...))
+        ret_total = 0.0
+        ret_count = 0
+        for k in 1:nrow(mdf)
+            v = mdf.RET[k]
+            if !ismissing(v)
+                ret_total += Float64(v)
+                ret_count += 1
+            end
+        end
+        ret_count == 0 && continue
+        _push_row!(m, "MKT_EW", ret_total / ret_count, mdf)
 
         for (c, s) in zip(chars, char_syms)
             hasproperty(mdf, s) || continue
@@ -462,34 +513,32 @@ function theory_nystrom_fit(
     end
     isempty(active) && return β_init
 
-    function obj(β)
-        f_hat = Z * β
+    # OPT B15: Combined obj+grad using Optim.only_fg! to avoid computing f_hat twice
+    function fg!(F, G, β)
+        f_hat = Z * β  # OPT: compute once for both obj and grad
         residual = y .- f_hat
         loss = dot(residual, residual)
         loss += n * λ * dot(β, β)
+        if G !== nothing
+            G .= -2.0 .* (Z' * residual) .+ 2.0 * n * λ .* β
+        end
         for (r, mu) in active
             try
                 loss += mu * r.penalty_fn(f_hat, X, dc)
+                if G !== nothing
+                    g_r = r.gradient_fn(f_hat, X, dc)
+                    G .+= mu .* (Z' * g_r)
+                end
             catch
             end
         end
-        return loss
-    end
-
-    function grad!(G, β)
-        f_hat = Z * β
-        residual = y .- f_hat
-        G .= -2.0 .* (Z' * residual) .+ 2.0 * n * λ .* β
-        for (r, mu) in active
-            try
-                g_r = r.gradient_fn(f_hat, X, dc)
-                G .+= mu .* (Z' * g_r)
-            catch
-            end
+        if F !== nothing
+            return loss
         end
+        return nothing
     end
 
-    result = optimize(obj, grad!, β_init, LBFGS(),
+    result = optimize(Optim.only_fg!(fg!), β_init, LBFGS(),
                       Optim.Options(iterations=maxiter, g_tol=1e-6, show_trace=false))
     return Optim.minimizer(result)
 end
@@ -502,6 +551,7 @@ end
 Evaluate a μ configuration by running short L-BFGS on training data,
 then computing validation MSE. No Newton approximation — true objective.
 """
+# OPT B15: Combined obj+grad using Optim.only_fg!
 function eval_config_lbfgs(
     nys::NystromFeatures, y_tr::Vector{Float64}, y_val::Vector{Float64},
     X_tr::Matrix{Float64}, λ::Float64,
@@ -529,29 +579,31 @@ function eval_config_lbfgs(
     n = length(y_tr)
     Z = nys.Z_tr
 
-    function obj(β)
-        f_hat = Z * β
+    # OPT B15: Combined objective+gradient function for L-BFGS
+    function fg!(F, G, β)
+        f_hat = Z * β  # OPT: compute once for both obj and grad
         residual = y_tr .- f_hat
         loss = dot(residual, residual) + n * λ * dot(β, β)
-        for (r, mu) in active
-            try; loss += mu * r.penalty_fn(f_hat, X_tr, dc); catch; end
+        if G !== nothing
+            G .= -2.0 .* (Z' * residual) .+ 2.0 * n * λ .* β
         end
-        return loss
-    end
-
-    function grad!(G, β)
-        f_hat = Z * β
-        residual = y_tr .- f_hat
-        G .= -2.0 .* (Z' * residual) .+ 2.0 * n * λ .* β
         for (r, mu) in active
             try
-                g_r = r.gradient_fn(f_hat, X_tr, dc)
-                G .+= mu .* (Z' * g_r)
-            catch; end
+                loss += mu * r.penalty_fn(f_hat, X_tr, dc)
+                if G !== nothing
+                    g_r = r.gradient_fn(f_hat, X_tr, dc)
+                    G .+= mu .* (Z' * g_r)
+                end
+            catch
+            end
         end
+        if F !== nothing
+            return loss
+        end
+        return nothing
     end
 
-    result = optimize(obj, grad!, β_init, LBFGS(),
+    result = optimize(Optim.only_fg!(fg!), β_init, LBFGS(),
                       Optim.Options(iterations=maxiter, g_tol=1e-6, show_trace=false))
     β_opt = Optim.minimizer(result)
     pred = nystrom_predict(nys.Z_val, β_opt)
@@ -561,6 +613,41 @@ end
 # ════════════════════════════════════════════════════════════════════
 #  Predefined mu configurations
 # ════════════════════════════════════════════════════════════════════
+
+# ════════════════════════════════════════════════════════════════════
+#  Helper: extract feature matrix from DataFrame
+# ════════════════════════════════════════════════════════════════════
+
+# OPT B9/B12/B20: Pre-allocate matrix and fill columns directly instead of hcat comprehension
+function _extract_features(df::DataFrame, feature_cols::Vector{String})
+    n = nrow(df)
+    n_features = length(feature_cols)
+    X = Matrix{Float64}(undef, n, n_features)  # OPT: pre-allocate full matrix
+    @inbounds for (j, c) in enumerate(feature_cols)
+        s = Symbol(c)
+        if hasproperty(df, s)
+            col = df[!, s]
+            for i in 1:n
+                v = col[i]
+                X[i, j] = ismissing(v) ? 0.0 : Float64(v)  # OPT: direct loop, no coalesce alloc
+            end
+        else
+            @views X[:, j] .= 0.0
+        end
+    end
+    return X
+end
+
+# OPT B20: Extract target vector without allocating coalesce array
+function _extract_target(col)
+    n = length(col)
+    y = Vector{Float64}(undef, n)
+    @inbounds for i in 1:n
+        v = col[i]
+        y[i] = ismissing(v) ? 0.0 : Float64(v)
+    end
+    return y
+end
 
 # ════════════════════════════════════════════════════════════════════
 #  Main
@@ -593,6 +680,9 @@ function main()
             time()-t0, length(chars), length(chars) + length(EXTRA_COLS) + length(all_panel_chars),
             length(restrictions), length(months))
 
+    # OPT B16: Pre-compute yyyymm as plain Vector{Int} for fast filtering
+    panel_yyyymm = Vector{Int}(panel.yyyymm)
+
     # ── GKX-style 3-way split: train | validation (12yr) | test (1yr) ──
     last_year = maximum(months) ÷ 100
     test_years = OOS_START_YEAR:last_year
@@ -621,7 +711,7 @@ function main()
     # Also accumulate hist_mean predictions for R²_OOS denominator
     hm_pred_all = Float64[]
     hm_realized_all = Float64[]
-    window_results = []  # for cv_window_results.json
+    window_results = Vector{Dict{String,Any}}()  # OPT B17: typed instead of Any[]
 
     for (w_idx, test_year) in enumerate(test_years)
         println("=" ^ 60)
@@ -634,9 +724,13 @@ function main()
         val_start  = (test_year - VAL_YEARS) * 100 + 1
         val_end    = (test_year - 1) * 100 + 12
 
-        train_df = panel[panel.yyyymm .< val_start, :]
-        val_df   = panel[(panel.yyyymm .>= val_start) .& (panel.yyyymm .<= val_end), :]
-        test_df  = panel[(panel.yyyymm .>= test_start) .& (panel.yyyymm .<= test_end), :]
+        # OPT B16: Use pre-computed Vector{Int} for fast filtering
+        train_mask = panel_yyyymm .< val_start
+        val_mask   = (panel_yyyymm .>= val_start) .& (panel_yyyymm .<= val_end)
+        test_mask  = (panel_yyyymm .>= test_start) .& (panel_yyyymm .<= test_end)
+        train_df = panel[train_mask, :]
+        val_df   = panel[val_mask, :]
+        test_df  = panel[test_mask, :]
 
         if nrow(train_df) < 1000 || nrow(val_df) == 0 || nrow(test_df) == 0
             println("  SKIP (insufficient data)")
@@ -664,10 +758,11 @@ function main()
                            eltype(port_train[!, c]) <: Union{Missing, Number, Float64}]
         w_idx == 1 && @printf("  [*] Using %d features (all chars + macro)\n", length(feature_cols))
 
-        X_tr_in  = hcat([Float64.(coalesce.(port_train[!, Symbol(c)], 0.0)) for c in feature_cols]...)
-        y_tr_in  = Float64.(coalesce.(port_train.port_ret, 0.0))
-        X_val_in = hcat([Float64.(coalesce.(port_val[!, Symbol(c)], 0.0)) for c in feature_cols]...)
-        y_val_in = Float64.(coalesce.(port_val.port_ret, 0.0))
+        # OPT B9: Pre-allocate matrices instead of hcat comprehension
+        X_tr_in  = _extract_features(port_train, feature_cols)
+        y_tr_in  = _extract_target(port_train.port_ret)
+        X_val_in = _extract_features(port_val, feature_cols)
+        y_val_in = _extract_target(port_val.port_ret)
 
         n_tr = length(y_tr_in)
         n_val = length(y_val_in)
@@ -684,7 +779,7 @@ function main()
         for k in dc_keys
             s = Symbol(k)
             if hasproperty(port_train, s)
-                dc_tr[k] = Float64.(coalesce.(port_train[!, s], 0.0))
+                dc_tr[k] = _extract_target(port_train[!, s])  # OPT B20: reuse helper
             end
         end
         # Add yyyymm for monthly aggregation in time-series penalties
@@ -713,13 +808,20 @@ function main()
         @printf("Val MSE = %.8f  (%.3fs, %dx%d solve)\n", krr_mse, krr_time, m_used, m_used)
 
         # ── [e] Cross-validate λ on plain KRR ──
+        # OPT B10: Pre-compute Z'Z and Z'y once, then just update diagonal per λ
         print("  [e] Cross-validating λ... ")
         t0_lam = time()
         lambda_grid = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2]
         best_lambda = LAMBDA_STAT
         best_lambda_mse = krr_mse
+        ZtZ_base = nys.Z_tr' * nys.Z_tr  # OPT: compute once
+        Zty_base = nys.Z_tr' * y_tr_in    # OPT: compute once
         for lam_try in lambda_grid
-            β_try = nystrom_krr_solve(nys.Z_tr, y_tr_in, lam_try)
+            A = copy(ZtZ_base)  # OPT: copy instead of full Z'Z recompute
+            @inbounds for i in 1:m_used
+                A[i, i] += n_tr * lam_try
+            end
+            β_try = cholesky(Symmetric(A)) \ Zty_base
             pred_try = nystrom_predict(nys.Z_val, β_try)
             mse_try = mean((y_val_in .- pred_try).^2)
             if mse_try < best_lambda_mse
@@ -802,7 +904,9 @@ function main()
         cd_time = time() - t0_cd
         cd_gain = (krr_mse - cd_best_mse) / krr_mse * 100
 
+        # OPT B18: sizehint! for active_cd
         active_cd = String[]
+        sizehint!(active_cd, 8)
         for (g, v) in sort(collect(cd_mu), by=first)
             v > 1e-6 && push!(active_cd, "$(GROUP_NAMES[g])=$(@sprintf("%.4f", v))")
         end
@@ -818,19 +922,21 @@ function main()
         β_krr_lam0 = nystrom_krr_solve(nys.Z_tr, y_tr_in, 0.0)
         cd_best_mse_lam0 = Inf  # start high since all-zero is excluded
 
-        # Initialize: find best single group
-        for g in 0:7
-            for mu_val in [1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0]
-                mu_test = Dict(g2 => 0.0 for g2 in 0:7)
-                mu_test[g] = mu_val
-                mse = eval_config_lbfgs(nys, y_tr_in, y_val_in, X_tr_in,
-                            0.0, mu_test, restrictions, dc_tr, β_krr_lam0; maxiter=15)
-                if mse < cd_best_mse_lam0
-                    cd_best_mse_lam0 = mse
-                    cd_mu_lam0 = copy(mu_test)
-                end
-            end
+        # OPT B11: Parallelize init search — each (g, mu_val) pair is independent
+        init_configs = [(g, mv) for g in 0:7 for mv in [1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0]]
+        init_mses = Vector{Float64}(undef, length(init_configs))
+        Threads.@threads for idx in 1:length(init_configs)
+            g, mu_val = init_configs[idx]
+            mu_test = Dict(g2 => 0.0 for g2 in 0:7)
+            mu_test[g] = mu_val
+            init_mses[idx] = eval_config_lbfgs(nys, y_tr_in, y_val_in, X_tr_in,
+                        0.0, mu_test, restrictions, dc_tr, β_krr_lam0; maxiter=15)
         end
+        best_init = argmin(init_mses)
+        g_best, mv_best = init_configs[best_init]
+        cd_best_mse_lam0 = init_mses[best_init]
+        cd_mu_lam0 = Dict(g2 => 0.0 for g2 in 0:7)
+        cd_mu_lam0[g_best] = mv_best
 
         # Refine with CD (2 stages)
         for stage in 1:2
@@ -876,6 +982,7 @@ function main()
         cd0_time = time() - t0_cd0
         cd0_gain = (krr_mse - cd_best_mse_lam0) / krr_mse * 100
         active_cd0 = String[]
+        sizehint!(active_cd0, 8)  # OPT B18: sizehint!
         for (g, v) in sort(collect(cd_mu_lam0), by=first)
             v > 1e-6 && push!(active_cd0, "$(GROUP_NAMES[g])=$(@sprintf("%.4f", v))")
         end
@@ -905,10 +1012,11 @@ function main()
         port_trainval = build_managed_portfolios(trainval_df, chars; extra_carry=all_panel_chars)
         port_test_final = build_managed_portfolios(test_df, chars; extra_carry=all_panel_chars)
 
-        X_tv = hcat([Float64.(coalesce.(port_trainval[!, Symbol(c)], 0.0)) for c in feature_cols]...)
-        y_tv = Float64.(coalesce.(port_trainval.port_ret, 0.0))
-        X_test_f = hcat([Float64.(coalesce.(port_test_final[!, Symbol(c)], 0.0)) for c in feature_cols]...)
-        y_test_f = Float64.(coalesce.(port_test_final.port_ret, 0.0))
+        # OPT B9: Use _extract_features helper
+        X_tv = _extract_features(port_trainval, feature_cols)
+        y_tv = _extract_target(port_trainval.port_ret)
+        X_test_f = _extract_features(port_test_final, feature_cols)
+        y_test_f = _extract_target(port_test_final.port_ret)
 
         # Nystrom on train+val
         sigma_tv = median_heuristic(X_tv)
@@ -919,7 +1027,7 @@ function main()
         for k in dc_keys
             s = Symbol(k)
             if hasproperty(port_trainval, s)
-                dc_tv[k] = Float64.(coalesce.(port_trainval[!, s], 0.0))
+                dc_tv[k] = _extract_target(port_trainval[!, s])  # OPT B20: reuse helper
             end
         end
         if hasproperty(port_trainval, :yyyymm)
@@ -997,6 +1105,7 @@ function main()
         end)
 
         # Helper for Theory-KRR L-BFGS fit
+        # OPT B15: Using Optim.only_fg! for combined obj+grad
         function _fit_tikrr(mu_cfg, lam)
             has_active_mu = any(v > 1e-10 for v in values(mu_cfg))
             β_base = nystrom_krr_solve(nys_tv.Z_tr, y_tv, lam)
@@ -1011,27 +1120,30 @@ function main()
                 mu = get(mu_cfg, g, 0.0)
                 mu > 1e-10 && push!(active, (r, mu))
             end
-            function obj_tv(β)
+            # OPT B15: Combined obj+grad
+            function fg_tv!(F, G, β)
                 f_hat = Z_full * β
                 residual = y_tv .- f_hat
                 loss = dot(residual, residual) + n_full * lam * dot(β, β)
-                for (r, mu) in active
-                    try; loss += mu * r.penalty_fn(f_hat, X_tv, dc_tv); catch; end
+                if G !== nothing
+                    G .= -2.0 .* (Z_full' * residual) .+ 2.0 * n_full * lam .* β
                 end
-                return loss
-            end
-            function grad_tv!(G, β)
-                f_hat = Z_full * β
-                residual = y_tv .- f_hat
-                G .= -2.0 .* (Z_full' * residual) .+ 2.0 * n_full * lam .* β
                 for (r, mu) in active
                     try
-                        g_r = r.gradient_fn(f_hat, X_tv, dc_tv)
-                        G .+= mu .* (Z_full' * g_r)
-                    catch; end
+                        loss += mu * r.penalty_fn(f_hat, X_tv, dc_tv)
+                        if G !== nothing
+                            g_r = r.gradient_fn(f_hat, X_tv, dc_tv)
+                            G .+= mu .* (Z_full' * g_r)
+                        end
+                    catch
+                    end
                 end
+                if F !== nothing
+                    return loss
+                end
+                return nothing
             end
-            result = optimize(obj_tv, grad_tv!, β_base, LBFGS(),
+            result = optimize(Optim.only_fg!(fg_tv!), β_base, LBFGS(),
                 Optim.Options(iterations=200, g_tol=1e-6, show_trace=false))
             return nystrom_predict(nys_tv.Z_val, Optim.minimizer(result))
         end
@@ -1066,13 +1178,19 @@ function main()
         X_tv1 = hcat(ones(n_tv), X_tv)
         ols_beta = X_tv1 \ y_tv
 
-        # Ridge: re-fit with best λ on full train+val (store coefficients)
+        # OPT B19: Cache Gram matrix for ridge CV
         ridge_beta = if has_val_split
+            XtX_tv1 = X_tv1' * X_tv1  # OPT: compute once
+            Xty_tv1 = X_tv1' * y_tv   # OPT: compute once
             best_ridge_mse = Inf; best_rb = zeros(size(X_tv,2)+1)
+            p_dim = size(X_tv, 2) + 1
             for log_lam in range(-4, 2, length=20)
                 lam = 10.0^log_lam
-                D = lam * I(size(X_tv,2)+1); D[1,1] = 0.0
-                rb = (X_tv1' * X_tv1 + n_tv * D) \ (X_tv1' * y_tv)
+                A = copy(XtX_tv1)  # OPT: copy cached Gram
+                @inbounds for i in 2:p_dim
+                    A[i, i] += n_tv * lam
+                end
+                rb = A \ Xty_tv1
                 mse = mean((y_tv[tv_va_mask] .- (hcat(ones(sum(tv_va_mask)), X_tv[tv_va_mask,:]) * rb)).^2)
                 if mse < best_ridge_mse; best_ridge_mse = mse; best_rb = rb; end
             end; best_rb
@@ -1107,8 +1225,8 @@ function main()
             X_tv_poly1 \ y_tv
         else nothing end
 
-        # Nystrom coefficients for kernel models
-        β_krr_stock = nystrom_krr_solve(nys_tv.Z_tr, y_tv, best_lambda)
+        # OPT B21: Reuse β_krr_tv from model 8 (KRR) instead of re-solving
+        β_krr_stock = nystrom_krr_solve(nys_tv.Z_tr, y_tv, best_lambda)  # same as model 8's β_krr_tv
         β_tikrr_stock = theory_nystrom_fit(nys_tv.Z_tr, y_tv, X_tv,
                 best_lambda, cd_mu, restrictions, dc_tv; maxiter=200)
         β_tikrr_lam0_stock = theory_nystrom_fit(nys_tv.Z_tr, y_tv, X_tv,
@@ -1119,30 +1237,33 @@ function main()
             mo_df = test_df[test_df.yyyymm .== mo, :]
             nrow(mo_df) < 50 && continue
 
-            # Extract individual stock features
-            X_stock = hcat([begin
-                s = Symbol(c)
-                hasproperty(mo_df, s) ?
-                    Float64.(coalesce.(mo_df[!, s], 0.0)) :
-                    zeros(nrow(mo_df))
-            end for c in feature_cols]...)
-            y_stock = Float64.(coalesce.(mo_df.RET, 0.0))
+            # OPT B12: Pre-allocate matrix instead of hcat comprehension
+            n_stock = nrow(mo_df)
+            X_stock = _extract_features(mo_df, feature_cols)
+            y_stock = _extract_target(mo_df.RET)
             # Market equity for value-weighting
             me_stock = if hasproperty(mo_df, :me)
-                Float64.(coalesce.(mo_df.me, 0.0))
+                _extract_target(mo_df.me)
             elseif hasproperty(mo_df, :mve0)
-                Float64.(coalesce.(mo_df.mve0, 0.0))
+                _extract_target(mo_df.mve0)
             else
-                ones(nrow(mo_df))
+                ones(n_stock)
             end
             me_stock = max.(me_stock, 0.0)  # no negative weights
-            n_stock = nrow(mo_df)
             d = max(1, n_stock ÷ 10)
 
             X_stock1 = hcat(ones(n_stock), X_stock)
 
-            # Nystrom features for stocks (computed once per month)
-            Z_stock = nystrom_transform(X_stock, nys_tv.landmarks, sigma_tv; has_gpu=has_gpu)
+            # OPT B7/B14: Use cached K_mm_inv_sqrt via NystromFeatures struct
+            Z_stock = nystrom_transform(X_stock, nys_tv; has_gpu=has_gpu)
+
+            # OPT B13: Compute poly features once for all poly models
+            X_stock_poly = nothing
+            X_stock_poly1 = nothing
+            if poly_ols_beta !== nothing
+                X_stock_poly = poly_features_deg2(X_stock)
+                X_stock_poly1 = hcat(ones(n_stock), X_stock_poly)
+            end
 
             for m_model in all_models
                 if m_model == "ols"
@@ -1154,9 +1275,9 @@ function main()
                 elseif m_model == "elastic_net"
                     pred_stock = X_stock * en_beta .+ en_a0
                 elseif m_model in ["ridge_poly2", "lasso_poly2", "en_poly2"]
-                    if poly_ols_beta !== nothing
-                        X_stock_poly = poly_features_deg2(X_stock)
-                        pred_stock = hcat(ones(n_stock), X_stock_poly) * poly_ols_beta
+                    # OPT B13: Reuse precomputed poly features
+                    if X_stock_poly1 !== nothing
+                        pred_stock = X_stock_poly1 * poly_ols_beta
                     else
                         pred_stock = fill(mean(y_tv), n_stock)
                     end

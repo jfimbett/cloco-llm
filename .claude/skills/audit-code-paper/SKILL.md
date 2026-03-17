@@ -65,7 +65,7 @@ Score each category PASS (code matches paper) / PARTIAL (mostly matches, minor d
 - Check: restriction names, family assignments, penalty formulas match the paper
 
 **Category 5: Penalty Functional Forms**
-- Paper: Type A (Euler), Type B (production FOC), Type D (demand)
+- Paper: Type A (Euler), Type B (production FOC), Type C (demand)
 - Code: are the penalty() functions consistent with the claimed formulas?
 - Check: gradient implementations are analytically correct
 

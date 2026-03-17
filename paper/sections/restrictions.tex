@@ -148,7 +148,7 @@ Rational inattention models generate endogenous information asymmetry: agents wi
 
 Demand-system models derive asset prices from the aggregation of heterogeneous investors' portfolio demands.
 The equilibrium restriction is market clearing: aggregate demand for each asset must equal its supply.
-This yields Type~D (demand-system equilibrium) penalties as defined in Section~\ref{sub:demand}:
+This yields Type~C (demand-system equilibrium) penalties as defined in Section~\ref{sub:demand}:
 \begin{equation}\label{eq:demand_family}
 C_j^{\mathrm{demand}}(f) \;=\;
 \sum_{t=1}^{T}
@@ -234,7 +234,7 @@ The excess bond premium (Restriction~56) isolates the component of credit spread
 
 The catalog comprises fifty-six restrictions organized into eight families.
 Each restriction imposes a distinct functional form on the mapping from observable characteristics $\mathbf{X}_{i,t}$ to expected returns $f(\mathbf{X}_{i,t})$, and each translates into a specific penalty functional $C_j(f)$ within the Theory-KRR objective~\eqref{eq:tikrr}.
-The penalties are heterogeneous in structure: Type~A penalties enforce Euler equation moment conditions and require specifying the SDF---either from a structural model or from a linear factor representation $M_{t+1} = a + b F_{t+1}$ (Restrictions~1--13, 24--37, 42, 46, 50, 53, 56); Type~B penalties equate expected returns to functions of investment, behavioral, or macro variables through first-order conditions (Restrictions~14--23, 41, 43, 44--45, 47--49, 51--52, 54--55); and Type~D penalties enforce market-clearing equilibrium conditions from demand-system models (Restrictions~38--40).
+The penalties are heterogeneous in structure: Type~A penalties enforce Euler equation moment conditions and require specifying the SDF---either from a structural model or from a linear factor representation $M_{t+1} = a + b F_{t+1}$ (Restrictions~1--13, 24--37, 42, 46, 50, 53, 56); Type~B penalties equate expected returns to functions of investment, behavioral, or macro variables through first-order conditions (Restrictions~14--23, 41, 43, 44--45, 47--49, 51--52, 54--55); and Type~C penalties enforce market-clearing equilibrium conditions from demand-system models (Restrictions~38--40).
 Despite this heterogeneity, the framework in Section~\ref{sec:framework} accommodates all fifty-six penalties within a single objective: each $C_j(f)$ depends on $f$ only through its evaluations at observed data points, the representer theorem applies, and cross-validation selects the vector $\bm{\mu}$ that balances predictive fit against theoretical guidance.
 
 A property of the catalog that makes the $\mu_j$ ranking meaningful is that many restrictions share observable input variables but impose different functional relationships.

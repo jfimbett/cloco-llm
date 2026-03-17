@@ -12,6 +12,7 @@ python -m code.generate_tables --table N  # specific table (1, 10, 11, 12)
 | 1  | `paper/tables/table_1.tex`  | `code/tables/summary_stats.py` | `data/processed/panel_monthly.parquet` |
 | 10 | `paper/tables/table_10.tex` | `code/tables/oos_performance.py` | `output/cv_results.csv` |
 | 11 | `paper/tables/table_11.tex` | `code/tables/theory_ranking.py` | `output/cv_window_results.json` |
-| 12 | `paper/tables/table_12.tex` | `code/tables/subsample_analysis.py` | `output/cv_window_results.json` |
+| 12 | `paper/tables/table_12.tex` | `code/tables/mu_significance.py` | `output/cv_window_results.json` |
+| DM | `paper/tables/table_dm.tex` | `code/tables/dm_pairwise.py` | `output/oos_predictions.csv` |
 
 Tables 2--9 are hardcoded in `paper/tables_and_figures.tex` (theory restriction catalogs, not computed).

@@ -219,7 +219,7 @@ to asset pricing directly into the nonparametric objective.
 \end{remark}
 
 %----------------------------------------------------------------------
-\subsubsection{Type~D: Demand-System Equilibrium Penalties}
+\subsubsection{Type~C: Demand-System Equilibrium Penalties}
 \label{sub:demand}
 %----------------------------------------------------------------------
 
@@ -256,7 +256,7 @@ It depends on $f$ only through $\{f(\mathbf{X}_{i,t})\}_{i,t}$.
 \begin{remark}[Connections to the demand-system literature]
 The demand-system approach models institutional
 investors' demand as a function of characteristics and expected returns.
-Type~D penalties encode the equilibrium restriction that aggregate demand
+Type~C penalties encode the equilibrium restriction that aggregate demand
 equals supply, translating the demand-system estimator's logic into a
 penalty within our nonparametric framework.
 When $D_i^{(j)}$ is linear in expected returns, $C_j^{\mathrm{demand}}$
@@ -310,7 +310,7 @@ The condition~\eqref{eq:penalty_eval} holds for all three penalty types:
 \item \emph{Type~B (Production):}
   $C_j^{\mathrm{prod}}(f)$ is explicitly a function of
   $\{f(\mathbf{X}_s)\}_{s}$ and data $\{g_j(\mathbf{Z}_s^{(j)})\}_s$.
-\item \emph{Type~D (Demand):}
+\item \emph{Type~C (Demand):}
   $C_j^{\mathrm{demand}}(f)$ depends on $f$ through
   $\hat{\mathbf{f}}_t = (f(\mathbf{X}_{1,t}), \ldots, f(\mathbf{X}_{N,t}))^\top$.
 \end{enumerate}
@@ -483,7 +483,7 @@ Alternatively, random Fourier features or Nystr\"{o}m approximations
 reduce the effective dimension.
 \end{remark}
 
-\begin{remark}[Type~D penalties and convexity]
+\begin{remark}[Type~C penalties and convexity]
 \label{rem:type_d_convexity}
 When demand functions $D_i^{(j)}$ are linear in expected returns,
 $C_j^{\mathrm{demand}}$ is quadratic in $\hat{\mathbf{f}}$ and the

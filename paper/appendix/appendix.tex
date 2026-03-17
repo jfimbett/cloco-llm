@@ -287,21 +287,22 @@ $n = 90{,}000$ (stocks)       & 65~GB, $\sim 10$h & 360~MB, $\sim 3$min \\
 The hyperparameter vector $(\lambda_{\mathrm{stat}}, \mu_1^{\mathrm{group}}, \ldots, \mu_G^{\mathrm{group}})$ is $G + 1 = 9$ dimensional.
 Exhaustive grid search with $k$ values per dimension requires $k^9$ evaluations; even with $k = 5$, this exceeds $10^6$ configurations, each requiring one full Theory-KRR fit.
 
-We adopt cyclic coordinate descent over the group multipliers, following the algorithmic template of \citet{friedman2010regularization}.
+We adopt adaptive coordinate descent over the group multipliers, following the algorithmic template of \citet{friedman2010regularization}.
 The statistical penalty $\lambda_{\mathrm{stat}}$ is fixed by standard KRR cross-validation (a one-dimensional problem).
-The remaining 8 group multipliers are optimized sequentially: for each group $g$, we evaluate 16 candidate values
+The remaining 8 group multipliers are optimized in two stages.
+In the coarse stage, each group $g$ is searched over a log-spaced grid:
 \begin{equation}
 \label{eq:cd_candidates}
-\mu_g^{\mathrm{group}} \in \{0\} \cup \{10^{u} : u \in \mathrm{linspace}(-4, 1, 15)\},
+\mu_g^{\mathrm{group}} \in \{0\} \cup \{10^{u} : u \in \{-4, -3, -2, -1, 0, 1, 2\}\}.
 \end{equation}
-holding all other multipliers fixed, and retain the value that minimizes validation-set MSE.
-Including zero in the candidate set allows the algorithm to shut off entire theory families when they do not improve prediction.
+In the fine stage, the grid is refined adaptively around each group's current value using 11 candidates on a narrower log-spaced interval.
+Including zero in both grids allows the algorithm to shut off entire theory families when they do not improve prediction.
 
-Each evaluation requires one Nystr\"{o}m KRR solve ($m \times m$ Cholesky, $m = 500$) plus a single Newton-like correction that incorporates the structural penalty gradient (see Section~\ref{app:nystrom}).
-The 16 candidates within each group are evaluated in parallel across CPU cores, so the wall-clock cost per group equals a single evaluation.
-One full cycle through $G = 8$ groups therefore costs $8 \times 1$ evaluations in wall-clock time; we run up to 3 cycles and stop early if no multiplier changes.
+Each evaluation requires one Nystr\"{o}m KRR solve ($m \times m$ Cholesky, $m = 500$) followed by L-BFGS refinement (15 iterations) that incorporates the structural penalty gradient (see Section~\ref{app:nystrom}).
+The candidates within each group are evaluated in parallel across CPU cores, so the wall-clock cost per group equals a single evaluation.
+The fine stage terminates early if no multiplier changes in a complete cycle through all $G = 8$ groups.
 
-The total budget is at most $3 \times 8 \times 16 = 384$ evaluations, completing in under 5 seconds per rolling window on our 40-core workstation with Nystr\"{o}m features.
+The total budget is at most $2 \times 8 \times 11 = 176$ evaluations, completing in under 5 seconds per rolling window on our 40-core workstation with Nystr\"{o}m features.
 Coordinate descent has three advantages over random or grid search: (i)~it exploits the separable structure of the grouped penalty, (ii)~it automatically resolves substitution effects between correlated theory families, and (iii)~it scales linearly in the number of groups rather than exponentially.
 
 %----------------------------------------------------------------------

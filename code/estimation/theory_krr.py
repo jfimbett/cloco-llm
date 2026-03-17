@@ -9,7 +9,7 @@ economic theory. The objective is:
 where C_j are structural restrictions from asset pricing theory.
 
 For quadratic penalties (Types A/B): solved via augmented linear system.
-For non-quadratic penalties (Type D): L-BFGS with quadratic warm start.
+For non-quadratic penalties (Type C): L-BFGS with quadratic warm start.
 """
 import numpy as np
 from scipy.optimize import minimize

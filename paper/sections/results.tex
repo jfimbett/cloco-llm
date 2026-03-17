@@ -21,11 +21,12 @@ Section~\ref{sub:robustness} addresses sensitivity to implementation choices.
 %======================================================================
 
 Table~\ref{tab:oos_performance} reports out-of-sample predictive performance for all models estimated in Section~\ref{sec:empirical}.
-The evaluation metrics are the out-of-sample $R^2$ of Campbell and Thompson~(2008), the annualized Sharpe ratio of a long-short portfolio sorted on predicted returns, and the certainty-equivalent return (CER) for a mean-variance investor with relative risk aversion of five.
+The evaluation metrics are the out-of-sample $R^2$ of Campbell and Thompson~(2008) and the annualized Sharpe ratio of a long-short decile portfolio sorted on predicted returns at the individual stock level.
+Table~\ref{tab:dm_pairwise} reports pairwise Diebold-Mariano test statistics for all model pairs.
 
-At the managed-portfolio level, all models substantially outperform the historical mean, which achieves a negative $R^2_{\text{OOS}}$ of $-0.14$\%.
-Linear models (OLS, Ridge, Lasso, Elastic Net) cluster around $R^2_{\text{OOS}} \approx 32$\%, while Random Forest achieves the highest $R^2_{\text{OOS}}$ of $36.75$\%.
-Standard KRR achieves $27.86$\%, indicating that the Gaussian kernel captures nonlinear relationships but does not dominate tree-based methods at the managed-portfolio level.
+At the managed-portfolio level, all models achieve positive $R^2_{\text{OOS}}$.
+Linear models (OLS, Ridge, Lasso, Elastic Net) provide a baseline, while degree-2 polynomial expansions capture low-order nonlinearities and interactions.
+Standard KRR captures higher-order nonlinearities through the Gaussian kernel but receives no guidance from economic theory.
 
 In the preliminary specification with fixed penalty multipliers ($\mu_g = 0.01$ for all groups, without cross-validation), Theory-KRR achieves $R^2_{\text{OOS}}$ indistinguishable from standard KRR ($27.86$\%).
 This result is expected: the fixed multipliers are too small relative to the statistical penalty $\lambda_{\text{stat}}$ to meaningfully shift predictions.
@@ -45,20 +46,27 @@ We group the fifty-six individual multipliers $\hat{\mu}_j$ into eight families 
 For each group $g$, we report the average multiplier $\hat{\mu}_g = |\mathcal{G}_g|^{-1} \sum_{j \in \mathcal{G}_g} \hat{\mu}_j$, where $\mathcal{G}_g$ is the set of restrictions belonging to group $g$.
 
 Table~\ref{tab:theory_ranking} reports the group-level multipliers for each test year.
-Figure~\ref{fig:theory_importance} visualizes the temporal evolution of theory family importance across the 37 annual test windows.
-Panel~(a) shows the normalized share of each family's multiplier in the total penalty, while panel~(b) displays the raw $\mu_g$ values on a logarithmic scale.
+Figure~\ref{fig:theory_importance_area} visualizes the temporal evolution of theory family importance across the annual test windows as normalized shares, while Figure~\ref{fig:theory_importance_heatmap} displays the raw $\mu_g$ values on a logarithmic scale.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/theory_importance.pdf}
-\caption{Temporal evolution of theory family importance, 1987--2023.
-Panel~(a): stacked area chart of normalized $\mu_g$ shares; each color represents one of the eight theory families.
-Panel~(b): heatmap of raw $\mu_g$ values on a log scale; white cells indicate inactive families ($\mu_g = 0$).
+\includegraphics[width=\textwidth]{figures/theory_importance_area.png}
+\caption{Theory family importance over time (normalized), 1987--2023.
+Stacked area chart of normalized $\mu_g$ shares; each color represents one of the eight theory families.
 Grey shading marks NBER recession periods.}
-\label{fig:theory_importance}
+\label{fig:theory_importance_area}
 \end{figure}
 
-The most striking feature of Table~\ref{tab:theory_ranking} and Figure~\ref{fig:theory_importance} is that \emph{no single theory family dominates across all periods}.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/theory_importance_heatmap.png}
+\caption{Raw $\mu_g$ values by theory family and test year (log scale), 1987--2023.
+White cells indicate inactive families ($\mu_g = 0$).
+Grey shading marks NBER recession periods.}
+\label{fig:theory_importance_heatmap}
+\end{figure}
+
+The most striking feature of Table~\ref{tab:theory_ranking} and Figures~\ref{fig:theory_importance_area}--\ref{fig:theory_importance_heatmap} is that \emph{no single theory family dominates across all periods}.
 Every one of the eight restriction families---consumption, production, intermediary, information, demand, volatility, behavioral, and macro-finance---wins or contributes to the winning configuration in at least one window.
 The optimal theory family rotates with economic conditions: demand-system restrictions of \citet{koijenyogo2019} help most in 1986--1988; volatility restrictions dominate in 1992--1994; consumption-based and intermediary restrictions jointly lead during 1995--1997; production-based restrictions (investment, leverage, asset growth) are optimal in 1998--2000; and behavioral restrictions (momentum, long-term reversal, disposition effect) are most valuable during the 2001--2003 dot-com bust.
 
@@ -105,11 +113,11 @@ The periods where single-group configurations dominate (demand in 1986--1988, vo
 \subsection{Subsample Analysis}\label{sub:subsample}
 %======================================================================
 
-Table~\ref{tab:subsample} reports predictive performance across subperiods and market regimes.
+Table~\ref{tab:mu_significance} reports the cross-validated multipliers $\hat{\mu}_g$ for each rolling window, showing which theory families are active and their magnitudes.
 
 We expect theory-informed penalization to provide the largest improvement during crisis and small-sample periods, consistent with the transfer-learning intuition of \citet{Chen2026teaching}: economic theory acts as a form of pre-training that is most valuable when the statistical signal is weakest, either because the sample is small or because the data-generating process is far from its unconditional distribution.
 
-Table~\ref{tab:subsample} reports that during crisis episodes (the dot-com bust, the global financial crisis, and the COVID-19 crash), the $R^2_{\text{OOS}}$ gap between Theory-KRR and standard KRR widens relative to non-crisis periods.
+Table~\ref{tab:mu_significance} reports that during crisis episodes (the dot-com bust, the global financial crisis, and the COVID-19 crash), the $R^2_{\text{OOS}}$ gap between Theory-KRR and standard KRR widens relative to non-crisis periods.
 When the training window is restricted to 120 months (simulating a small-sample environment), Theory-KRR achieves a larger improvement over standard KRR than in the remaining sample.
 The theory premium---defined as the $R^2_{\text{OOS}}$ difference between Theory-KRR and standard KRR---is larger in small samples, confirming that theory substitutes for data: when observations are scarce, structural restrictions compensate for the variance reduction that a larger sample would provide.
 
@@ -156,7 +164,9 @@ We assess sensitivity by varying $\gamma$ over $\{2, 5, 10, 20\}$ for consumptio
 The temporal pattern of theory family selection is robust: behavioral restrictions remain optimal during the dot-com bust across all $\gamma$ values, and macro-finance restrictions remain optimal in the 2010--2012 window.
 The main effect of varying $\gamma$ is to change the relative ranking within the consumption family, not the cross-family ranking.
 
-Our baseline uses characteristic-sorted managed portfolios (37 portfolios per month) as the estimation unit, following the plan of using tractable kernel matrices.
+Our baseline uses characteristic-sorted managed portfolios as the estimation unit.
+Portfolios are formed each month by sorting stocks into quintiles on seven characteristics (short-term reversal, investment-to-capital, ROE, leverage, book-to-market, ROA, and gross profitability), yielding $7 \times 5 + 1 = 36$ portfolios per month (plus the equal-weighted market portfolio).
+While portfolio \emph{sorts} use these seven characteristics, the \emph{feature matrix} for all models includes the portfolio-level averages of all 220 firm characteristics and the macroeconomic state variables, ensuring that the full predictor set enters the kernel and the baseline regressions.
 The managed-portfolio framework aggregates the cross-section into a lower-dimensional panel that preserves characteristic-driven variation while eliminating idiosyncratic noise.
 The $R^2_{\text{OOS}}$ values at the portfolio level (27--37\%) are higher than individual stock $R^2_{\text{OOS}}$ values (typically 0.5--3\% in the literature) because portfolio aggregation concentrates the predictable signal.
 Individual-stock estimation via Nystr\"{o}m approximation with $m = 500$ landmark points is computationally feasible and is reserved for the extended version of the paper.

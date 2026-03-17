@@ -3,12 +3,12 @@ Build monthly security-level panel from raw data files.
 
 Merges CRSP monthly returns, firm characteristics, Compustat fundamentals,
 macro variables, and realized variance into a single panel at
-data/processed/panel_monthly.parquet.
+../data/processed/panel_monthly.parquet.
 
 Usage:
     python code/data_pipeline/build_panel.py
     python code/data_pipeline/build_panel.py --start 196307 --end 202312
-    python code/data_pipeline/build_panel.py --raw-dir data/raw --output data/processed/panel_monthly.parquet
+    python code/data_pipeline/build_panel.py --raw-dir ../data/raw --output ../data/processed/panel_monthly.parquet
 """
 
 import argparse
@@ -743,10 +743,10 @@ def build_panel(
 
 def main():
     parser = argparse.ArgumentParser(description="Build monthly security panel")
-    parser.add_argument("--raw-dir", type=str, default="data/raw",
+    parser.add_argument("--raw-dir", type=str, default="../data/raw",
                         help="Path to raw data directory")
     parser.add_argument("--output", type=str,
-                        default="data/processed/panel_monthly.parquet",
+                        default="../data/processed/panel_monthly.parquet",
                         help="Output parquet path")
     parser.add_argument("--start", type=int, default=196307,
                         help="Start yyyymm (default: 196307)")

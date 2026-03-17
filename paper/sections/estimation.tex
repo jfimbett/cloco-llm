@@ -74,8 +74,8 @@ We set $\delta = 0.99$ (monthly) in all consumption-based models and use $b = 0.
 This is the simplest approach: $C_j(f)$ is fully determined by the data and a known parameter vector, with no estimation of $\theta_j$.
 The risk is that published parameter values, calibrated to match aggregate moments in a specific sample, may not be appropriate for cross-sectional return prediction.
 
-Our baseline uses joint estimation (Approach~1), initialized from the pre-estimation values (Approach~2).
-Robustness analysis compares all three approaches.
+Our baseline uses calibration (Approach~3) for parameters with established values and pre-estimation (Approach~2) for SDF loadings, following the standard practice in the empirical asset pricing literature.
+Joint estimation (Approach~1) is reserved for robustness analysis, where we verify that the theory ranking is qualitatively stable across estimation approaches.
 For the sensitivity analysis, we report results over a grid of values for the most influential parameters:
 \begin{equation}\label{eq:sensitivity_grid}
 \gamma \in \{2, 5, 10, 20\}, \qquad \delta \in \{0.95, 0.97, 0.99\}.
@@ -117,19 +117,21 @@ The 12-year validation window follows \citet{gu2020empirical} and provides suffi
 After selecting $(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}})$ on the validation sample, we re-estimate $f$ on the combined training and validation data (all months through year $\tau - 1$) and predict returns for year $\tau$.
 This rolling protocol yields 37 annual out-of-sample predictions spanning 1987--2023, covering the 1987 crash, the dot-com bust, the global financial crisis, and the COVID-19 pandemic.
 
-We search the 9-dimensional hyperparameter space using coordinate descent over the group multipliers, an approach inspired by the cyclic coordinate descent algorithm that underlies the Lasso and elastic net solvers of \citet{friedman2010regularization}.
+We search the 9-dimensional hyperparameter space using adaptive coordinate descent over the group multipliers, an approach inspired by the cyclic coordinate descent algorithm that underlies the Lasso and elastic net solvers of \citet{friedman2010regularization}.
 The statistical penalty $\lambda_{\mathrm{stat}}$ is first selected by standard KRR cross-validation without structural penalties ($\mu_g = 0$ for all $g$).
-Holding $\lambda_{\mathrm{stat}}$ fixed, we then optimize the eight group multipliers by cycling through each group $g = 1, \ldots, G$ and performing a one-dimensional line search over a grid of candidate values:
+Holding $\lambda_{\mathrm{stat}}$ fixed, we then optimize the eight group multipliers in two stages.
+In the coarse stage, we cycle through each group $g = 1, \ldots, G$ and perform a one-dimensional line search over a log-spaced grid:
 \begin{equation}\label{eq:cd_grid}
-\mu_g^{\mathrm{group}} \in \{0\} \cup \{10^{u} : u \in \mathrm{linspace}(-4, 1, 15)\}.
+\mu_g^{\mathrm{group}} \in \{0\} \cup \{10^{u} : u \in \{-4, -3, -2, -1, 0, 1, 2\}\}.
 \end{equation}
-For each candidate value of $\mu_g^{\mathrm{group}}$, all other multipliers are held at their current values, and the validation-set MSE is evaluated.
+In the fine stage, the grid is refined adaptively around each group's current value: if $\mu_g > 0$, the search concentrates on $\{0\} \cup \{10^u : u \in \mathrm{linspace}(\log_{10}\mu_g - 1, \log_{10}\mu_g + 1, 10)\}$; if $\mu_g = 0$, it searches $\{0\} \cup \{10^u : u \in \mathrm{linspace}(-6, -2, 10)\}$.
+For each candidate value, all other multipliers are held at their current values, and the validation-set MSE is evaluated using a short L-BFGS optimization (15 iterations) that adjusts the Nystr\"{o}m coefficient vector $\boldsymbol{\beta}$ to account for the structural penalties.
 The value that yields the lowest MSE is retained, and the algorithm moves to the next group.
-One full pass through all $G = 8$ groups constitutes one cycle; we repeat for up to 3 cycles and stop early if no group multiplier changes in a complete cycle.
+The fine stage terminates early if no group multiplier changes in a complete cycle.
 
-The total number of function evaluations is at most $3 \times 8 \times 16 = 384$, compared to $k^9$ for an exhaustive grid.
-Each evaluation requires solving one Nystr\"{o}m-approximated KRR system (an $m \times m$ Cholesky factorization with $m = 500$; see Appendix~\ref{app:nystrom}), followed by a single Newton-like correction step that incorporates the structural penalty gradient.
-Because the 16 candidate values within each group are independent, they are evaluated in parallel across CPU cores, so each group's line search completes in the wall-clock time of a single evaluation.
+The total number of function evaluations is at most $2 \times 8 \times 11 = 176$, compared to $k^9$ for an exhaustive grid.
+Each evaluation requires solving one Nystr\"{o}m-approximated KRR system (an $m \times m$ Cholesky factorization with $m = 500$; see Appendix~\ref{app:nystrom}), followed by L-BFGS refinement that incorporates the structural penalty gradient.
+Because the candidate values within each group are independent, they are evaluated in parallel across CPU cores, so each group's line search completes in the wall-clock time of a single evaluation.
 On our 40-core workstation, the full coordinate descent completes in under 5 seconds per rolling window.
 
 This approach connects to the penalized GMM literature, where sequential moment selection achieves rates comparable to the oracle that knows which moments are valid \citep{Caner2009lasso,Cheng2015select}.
@@ -150,15 +152,16 @@ We solve the system using Cholesky factorization, which is numerically stable an
 For problems involving Type~A (Euler equation) penalties, the system matrix in~\eqref{eq:foc} contains the term $\bm{\Omega}\,\mathbf{K}$, where $\bm{\Omega}$ includes the $\mathbf{A}_j^\top \mathbf{A}_j$ matrices.
 These are at most rank $T$ (since $\mathbf{A}_j$ has $T$ rows), and we exploit this low-rank structure by precomputing and caching the products $\mathbf{A}_j\,\mathbf{K}$ for each active Euler-equation restriction.
 
-When structural penalties are active, we approximate the theory-informed solution by a single Newton-like correction from the standard KRR warm start.
-Specifically, let $\hat{\boldsymbol{\beta}}_{\mathrm{KRR}}$ denote the Nystr\"{o}m KRR solution (all $\mu_j = 0$), and let $\mathbf{g} = \sum_j \mu_j \, \mathbf{Z}^\top \frac{\partial C_j}{\partial \hat{\mathbf{f}}} \big|_{\hat{\mathbf{f}} = \mathbf{Z}\hat{\boldsymbol{\beta}}_{\mathrm{KRR}}}$ be the projected structural penalty gradient evaluated at the KRR fit.
-The theory-informed coefficient vector is
-\begin{equation}\label{eq:newton_step}
-\hat{\boldsymbol{\beta}}_{\mathrm{theory}} = \hat{\boldsymbol{\beta}}_{\mathrm{KRR}} - \alpha \, (\mathbf{Z}^\top\mathbf{Z} + n\lambda_{\mathrm{stat}}\,\mathbf{I}_m)^{-1} \mathbf{g},
+When structural penalties are active, we optimize the Nystr\"{o}m coefficient vector $\boldsymbol{\beta}$ via L-BFGS, initialized from the standard KRR warm start.
+Specifically, let $\hat{\boldsymbol{\beta}}_{\mathrm{KRR}}$ denote the Nystr\"{o}m KRR solution (all $\mu_j = 0$).
+We minimize the penalized objective
+\begin{equation}\label{eq:lbfgs_obj}
+L(\boldsymbol{\beta}) = \|\mathbf{y} - \mathbf{Z}\boldsymbol{\beta}\|^2 + n\lambda_{\mathrm{stat}}\|\boldsymbol{\beta}\|^2 + \sum_j \mu_j\, C_j(\mathbf{Z}\boldsymbol{\beta})
 \end{equation}
-where the step size $\alpha$ is selected from a discrete set $\{0, 0.01, 0.05, 0.1, 0.5, 1, 2\}$ by minimizing the validation-set MSE.
-This one-step correction is computationally cheap---it requires one $m \times m$ Cholesky factorization plus one matrix-vector product per active restriction---and avoids the overhead of iterative L-BFGS optimization.
-Since the structural penalties are small relative to the data-fit term (by construction, as the $\mu_j$ are tuned to improve validation MSE rather than to enforce exact compliance), the single Newton step provides a good approximation to the fully converged solution.
+using L-BFGS with gradient~\eqref{eq:nystrom_gradient}, starting from $\hat{\boldsymbol{\beta}}_{\mathrm{KRR}}$.
+During the coordinate descent's hyperparameter search, we run L-BFGS for 15 iterations per candidate configuration to obtain a fast approximate evaluation of validation-set MSE.
+For the final out-of-sample prediction (after $\bm{\mu}$ is selected), we run L-BFGS for 200 iterations to convergence.
+This approach is computationally efficient because the L-BFGS iterates operate on the $m$-dimensional coefficient vector $\boldsymbol{\beta}$ rather than the $n$-dimensional $\boldsymbol{\alpha}$, and the KRR warm start ensures rapid convergence.
 
 The kernel matrix $\mathbf{K}$ is $n \times n$ and must be stored in memory.
 For our primary specification with $n \approx 4{,}000$ (cross-section of managed portfolios over 12 months), $\mathbf{K}$ occupies approximately 128~MB in double precision, which is manageable on standard hardware.

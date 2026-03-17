@@ -12,7 +12,8 @@ from pathlib import Path
 from code.tables.summary_stats import generate as gen_table1
 from code.tables.oos_performance import generate as gen_table10
 from code.tables.theory_ranking import generate as gen_table11
-from code.tables.subsample_analysis import generate as gen_table12
+from code.tables.mu_significance import generate as gen_table12
+from code.tables.dm_pairwise import generate as gen_table_dm
 from code.figures.theory_importance import generate as gen_fig_theory
 
 
@@ -20,7 +21,8 @@ _GENERATORS = {
     1: ('Table 1: Summary Statistics', gen_table1),
     10: ('Table 10: OOS Performance', gen_table10),
     11: ('Table 11: Theory Ranking', gen_table11),
-    12: ('Table 12: Subsample Analysis', gen_table12),
+    12: ('Table 12: Per-Window μ Significance', gen_table12),
+    'dm': ('Table: Pairwise DM Tests', gen_table_dm),
     'fig': ('Figure: Theory Importance', gen_fig_theory),
 }
 

@@ -37,7 +37,7 @@ _MACRO_COLS = [
 _NON_CHAR_COLS = set(_ID_COLS + _RETURN_COLS + _PRICE_COLS + _MACRO_COLS)
 
 
-def load_panel(path: str = 'data/processed/panel_monthly.parquet') -> pd.DataFrame:
+def load_panel(path: str = '../data/processed/panel_monthly.parquet') -> pd.DataFrame:
     """Load the monthly stock panel from parquet.
 
     When TEST_MODE is active, subsample to TEST_MAX_STOCKS_PER_MONTH random
