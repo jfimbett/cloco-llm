@@ -1,359 +1,177 @@
-# cloco — Research Orchestration for Economics with Claude Code
+# Theories as Regularizers: Theory-Informed Kernel Ridge Regression for Asset Pricing
 
-> **A multi-agent, quality-gated research pipeline for economics papers — from idea to submission — built on top of Claude Code.**
+> **Code, data pipeline, and paper for "Theories as Regularizers" — embedding economic theory into nonparametric return prediction via structured penalty functions in a kernel ridge regression framework.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Built with Claude](https://img.shields.io/badge/Built%20with-Claude%20Code-blueviolet)](https://claude.ai/code)
-[![Upstream: clo-author](https://img.shields.io/badge/Upstream-clo--author-blue)](https://hsantanna88.github.io/clo-author/)
+[![Julia](https://img.shields.io/badge/Julia-1.10+-9558B2?logo=julia)](https://julialang.org)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python)](https://python.org)
 
 ---
 
-## Lineage & Credits
+## Paper
 
-> Built on top of [**clo-author**](https://hsantanna88.github.io/clo-author/) by Hugo Sant'Anna,
-> which is itself a fork of [**claude-code-my-workflow**](https://github.com/pedrohcgs/claude-code-my-workflow)
-> by Pedro H.C. Sant'Anna (Emory University).
->
-> Extended for financial economics research at **Paris Dauphine University – PSL**
-> by [Juan F. Imbet](https://github.com/jfimbet).
+**Theories as Regularizers: Embedding Economic Structure into Nonparametric Return Prediction**
 
-This project would not exist without the pioneering infrastructure work from both upstream projects. The core orchestration philosophy, agent-critic pairing pattern, and quality-gate system originate there.
+*Juan F. Imbet* — Paris Dauphine University – PSL
 
----
-
-## What This Is
-
-Economics research pipelines are fragmented: literature review in one tool, data analysis in another, writing in a third, with no systematic quality enforcement across stages. Claude Code makes it possible to build an autonomous contractor that manages the full research lifecycle — dispatching specialized agents, enforcing quality gates, and tracking every decision.
-
-`cloco` extends the upstream infrastructure with four project-type-aware pipelines (`empirical`, `theory`, `structural`, `empirical+theory`), two new specialist agents (`econ-finance-theorist` and `structural-estimation-expert`), type-specific scoring weights so a pure theory paper isn't penalized for lacking data, two new skills (`/theory-model`, `/structural-estimation`), and a lessons protocol that captures project-specific corrections and prevents recurring mistakes.
-
----
-
-## Architecture at a Glance
-
-```
-/interview-me  →  Research Spec + Domain Profile
-       │
-       ├─ [empirical]────────── /find-data ──── /identify ──────────────────────────┐
-       ├─ [theory]───────────── /theory-model ───────────────────────────────────────┤
-       ├─ [structural]────────── /find-data ─── /theory-model ─── /structural-est ──┤
-       └─ [empirical+theory] ── /find-data ─── /theory-model ─── /identify ─────────┘
-                                                                          │
-                                              /data-analysis  (if not pure theory)
-                                                                          │
-                                                                   /draft-paper
-                                                                          │
-                                                     /paper-excellence → /review-paper
-                                                                          │
-                                                                      /submit
-```
-
-Every creator agent is paired with a critic. Every artifact must score ≥ 80 before advancing. Nothing ships below the gate threshold.
-
----
-
-## Four Research Pipelines
-
-### A — Empirical
-
-```
-Research Spec
-    ├── academic-librarian  ──[parallel]──  explorer
-    │         ↓ academic-editor               ↓ data-quality-surveyor
-    └──────── causal-strategist
-                    ↓ econometrics-critic
-              Coder (main Claude)
-                    ↓ debugger
-              economics-paper-writer
-                    ↓ academic-proofreader
-              blind-peer-referee ×2
-                    ↓ academic-editor
-              replication-verifier  →  submit
-```
-
-### B — Theory
-
-```
-Research Spec
-    ├── academic-librarian  ──[no data needed]
-    │         ↓ academic-editor
-    └──────── econ-finance-theorist
-                    ↓ econometrics-critic
-              economics-paper-writer
-                    ↓ academic-proofreader
-              blind-peer-referee ×2
-                    ↓ academic-editor  →  submit
-```
-
-### C — Structural
-
-```
-Research Spec
-    ├── academic-librarian  ──[parallel]──  explorer
-    │         ↓ academic-editor               ↓ data-quality-surveyor
-    ├──────── econ-finance-theorist
-    │               ↓ econometrics-critic
-    └──────── structural-estimation-expert
-                    ↓ econometrics-critic
-              Coder (main Claude)
-                    ↓ debugger
-              economics-paper-writer  →  replication-verifier  →  submit
-```
-
-### D — Empirical + Theory
-
-```
-Research Spec
-    ├── academic-librarian  ──[parallel]──  explorer
-    │         ↓ academic-editor               ↓ data-quality-surveyor
-    ├──────── econ-finance-theorist   ──[parallel]──  causal-strategist
-    │               ↓ econometrics-critic                  ↓ econometrics-critic
-    └─────────────────────────────────────────────────────
-              Coder (main Claude)  →  economics-paper-writer  →  submit
-```
-
----
-
-## 31 Skills
-
-| Category | Skill | What It Does |
-|----------|-------|-------------|
-| **Pipeline** | `/new-project [topic]` | Full pipeline: idea → paper (orchestrated) |
-| | `/interview-me [topic]` | Interactive research interview → spec + domain profile |
-| **Literature** | `/lit-review [topic]` | Librarian + Editor: literature search + synthesis |
-| | `/research-ideation [topic]` | Research questions + strategies |
-| **Theory & Structural** | `/theory-model [question]` | Theorist + Econometrician: formal model design |
-| | `/structural-estimation [spec]` | Structural expert + Econometrician: estimation design |
-| **Data & Strategy** | `/find-data [question]` | Explorer + Surveyor: data discovery + assessment |
-| | `/identify [question]` | Strategist + Econometrician: identification strategy |
-| | `/pre-analysis-plan [spec]` | Strategist: draft PAP (AEA/OSF/EGAP) |
-| **Analysis & Writing** | `/data-analysis [dataset]` | Coder + Debugger: end-to-end analysis |
-| | `/draft-paper [section]` | Writer: draft paper sections + humanizer pass |
-| | `/compile-latex [file]` | 3-pass XeLaTeX + bibtex |
-| **Quality & Review** | `/econometrics-check [file]` | Econometrician: 4-phase causal inference audit |
-| | `/review-code [file]` | Debugger: code quality review (standalone) |
-| | `/proofread [file]` | Proofreader: 6-category manuscript review |
-| | `/paper-excellence [file]` | Multi-agent parallel review + weighted score |
-| | `/review-paper [file]` | 2 Referees + Editor: simulated peer review |
-| | `/validate-bib` | Cross-reference citations vs bibliography |
-| **Submission** | `/target-journal [paper]` | Editor: journal targeting + submission strategy |
-| | `/respond-to-referee [report]` | Revision routing per revision-protocol |
-| | `/audit-replication [dir]` | Verifier: 10-check submission audit |
-| | `/data-deposit` | Coder + Verifier: AEA replication package |
-| | `/submit [journal]` | Final gate: score ≥ 95, all components ≥ 80 |
-| **Presentations** | `/create-talk [format]` | Storyteller + Discussant: Beamer/Quarto talk from paper |
-| | `/visual-audit [file]` | Slide layout audit |
-| **Infrastructure** | `/commit [msg]` | Stage, commit, PR, merge |
-| | `/humanizer [file]` | Strip 24 AI writing patterns |
-| | `/journal` | Research journal timeline |
-| | `/context-status` | Session health + context usage |
-| | `/learn` | Extract session discoveries into skills |
-| | `/deploy` | Quarto render + GitHub Pages sync |
-
----
-
-## 16 Agents
-
-| Agent | Role | Paired Critic |
-|-------|------|--------------|
-| `research-orchestrator` | Master controller — manages the dependency graph, dispatches agents, enforces quality gates | — |
-| `academic-librarian` | Systematic literature search across top journals, NBER, SSRN, RePeC | `academic-editor` |
-| `academic-editor` | Literature critique + peer review dispatcher | — |
-| `blind-peer-referee` | Simulated adversarial referee — two instances per paper | — |
-| `explorer` | Data discovery and feasibility assessment | `data-quality-surveyor` |
-| `data-quality-surveyor` | Data quality critique: validity, sample, identification fit | — |
-| `causal-strategist` | Identification strategy design: DiD, IV, RDD, event study | `econometrics-critic` |
-| `econ-finance-theorist` | Formal economic/finance model builder — equilibrium, proofs, LaTeX | `econometrics-critic` |
-| `structural-estimation-expert` | Structural model design + estimation strategy (MLE, GMM, SMM) | `econometrics-critic` |
-| `econometrics-critic` | Reviews causal design, theory models, and structural estimation | — |
-| `Coder` (main Claude) | R / Python / Stata analysis scripts | `debugger` |
-| `debugger` | Code quality: 12-category audit — reproducibility, alignment, polish | — |
-| `economics-paper-writer` | Paper drafting with anti-hedging, effect sizes, econometric notation | `academic-proofreader` |
-| `academic-proofreader` | Manuscript polish: 6-category review — structure, claims, writing, grammar | — |
-| `storyteller` | Beamer / Quarto presentation builder derived from `paper/main.tex` | `discussant` |
-| `discussant` | Slide quality review: layout, paper fidelity, narrative arc | — |
-| `replication-verifier` | Replication audit: compilation, script execution, output freshness | — |
-
----
-
-## Governance: 22 Rules
-
-The `.claude/rules/` directory contains the operational rules Claude follows:
-
-| Rule File | What It Governs |
-|-----------|----------------|
-| `adversarial-pairing.md` | Every creator has a paired critic; critics never edit |
-| `dependency-graph.md` | Phases activate by dependency, not sequence |
-| `domain-profile.md` | Field-specific conventions, journals, data sources |
-| `exploration-fast-track.md` | Fast-track protocol for exploratory work |
-| `exploration-folder-protocol.md` | `explorations/` folder conventions and quality gate (60/100) |
-| `lessons-protocol.md` | Append-only lessons log for project-specific corrections |
-| `meta-governance.md` | Generic vs specific content — what commits, what stays local |
-| `orchestrator-protocol.md` | Contractor mode: dependency loop, verification, limits |
-| `pdf-processing.md` | Rules for reading and extracting content from PDFs |
-| `plan-first-workflow.md` | Enter plan mode for non-trivial tasks; requirements spec |
-| `quality-gates.md` | Score thresholds: 80 (commit), 90 (PR), 95 (submission) |
-| `research-journal.md` | Append-only agent log after every agent invocation |
-| `revision-protocol.md` | R&R cycle: classify referee comments, route to agents |
-| `scoring-protocol.md` | Weighted aggregation formula; type-specific weight tables |
-| `separation-of-powers.md` | Critics never create; creators can't self-score |
-| `session-logging.md` | Three log triggers: post-plan, incremental, end-of-session |
-| `session-reporting.md` | `SESSION_REPORT.md` — consolidated append-only operations log |
-| `severity-gradient.md` | Critics calibrate severity by phase: Discovery → Peer Review |
-| `single-source-of-truth.md` | `paper/main.tex` is authoritative; talks derive from it |
-| `standalone-access.md` | Any skill can run standalone, bypassing the pipeline |
-| `table-generator.md` | Standards for generating LaTeX/Markdown tables from code |
-| `three-strikes.md` | Worker-critic pairs: max 3 rounds, then escalate |
-
----
-
-## Hooks
-
-The `.claude/hooks/` directory contains Python/shell hooks that enforce workflow discipline:
-
-| Hook | Trigger | Purpose |
-|------|---------|---------|
-| `context-monitor.py` | Tool call | Warns when context is approaching compression threshold |
-| `log-reminder.py` | Tool call | Reminds Claude to update session logs proactively |
-| `notify.py` | Tool call | Desktop notification on long-running agent completions |
-| `post-compact-restore.py` | Post-compact | Restores context after auto-compression |
-| `post-merge.sh` | Post-merge | Runs quality report generation after branch merge |
-| `pre-compact.py` | Pre-compact | Saves MEMORY.md + session log before compression |
-| `protect-files.py` | File write | Blocks writes to protected files (e.g., `paper/main.tex`) |
-| `quality-gate.py` | Commit | Blocks commits with aggregate score below 80 |
-| `verify-reminder.py` | Tool call | Reminds Claude to verify outputs after implementation |
-
----
-
-## Quality Gates & Scoring
-
-### Gates
-
-| Score | Gate | Condition |
-|-------|------|-----------|
-| ≥ 95 | Submission | All individual components ≥ 80 |
-| ≥ 90 | PR | Weighted aggregate |
-| ≥ 80 | Commit | Weighted aggregate |
-| 60 | Exploration | `explorations/` folder — advisory only |
-| < 80 | Blocked | Must fix before advancing |
-
-### Type-Specific Scoring Weights
-
-The orchestrator reads `project_type` from the research spec and applies the matching weight column. Missing components are excluded and remaining weights are renormalized.
-
-| Component | Source Agent | Empirical | Theory | Structural | Emp+Theory |
-|-----------|-------------|:---------:|:------:|:----------:|:----------:|
-| Literature coverage | `academic-editor` | 10% | 15% | 10% | 10% |
-| Data quality | `data-quality-surveyor` | 10% | — | 10% | 10% |
-| Theory model | `econometrics-critic` | — | 40% | 15% | 10% |
-| Identification validity | `econometrics-critic` | 25% | — | — | 20% |
-| Structural estimation | `econometrics-critic` | — | — | 20% | — |
-| Code quality | `debugger` | 15% | — | 15% | 15% |
-| Paper quality | blind-peer-referee avg | 25% | 30% | 20% | 25% |
-| Manuscript polish | `academic-proofreader` | 10% | 15% | 5% | 5% |
-| Replication readiness | `replication-verifier` | 5% | — | 5% | 5% |
-| **Total** | | **100%** | **100%** | **100%** | **100%** |
+**Abstract:** Machine learning methods for cross-sectional return prediction typically ignore economic theory, treating it as a source of features rather than structure. We propose Theory-Informed Kernel Ridge Regression (Theory-KRR), which embeds 56 structural restrictions from 8 theory families — consumption, production, intermediary, information, demand, volatility, behavioral, and macro — as penalty functions in a reproducing kernel Hilbert space. Each restriction penalizes deviations from theory-implied relationships (Euler equations, monotonicity, sign restrictions) with group-specific multipliers selected via coordinate descent cross-validation. The method nests plain KRR (all penalties off) and progressively activates theory channels that improve out-of-sample prediction.
 
 ---
 
 ## Quick Start
 
-**Prerequisites:**
-- [Claude Code](https://claude.ai/code): `npm install -g @anthropic/claude-code`
-- [GitHub CLI](https://cli.github.com): `gh auth login`
-- LaTeX distribution (for paper compilation): TeX Live or MiKTeX
+### Prerequisites
 
-**Steps:**
+- **Julia 1.10+** with packages: `CUDA`, `Optim`, `Parquet2`, `DataFrames`, `GLMNet`, `ProgressMeter`
+- **Python 3.10+** for data pipeline and table generation
+- **LaTeX** (TeX Live / MiKTeX) for paper compilation
+
+### Run
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/jfimbet/cloco && cd cloco
+# 1. Build the data panel (downloads public data, merges with WRDS extracts)
+python -m code.data_pipeline.download_public_data
+python -m code.data_pipeline.build_panel
 
-# 2. Open CLAUDE.md and fill in your project details
-#    Replace [Your Project Name] and [Your Institution]
+# 2. Run estimation (TEST_MODE=true in .env for fast iteration)
+julia --threads=auto code/run_estimation_julia.jl
 
-# 3. Fill in .claude/rules/domain-profile.md with your field,
-#    target journals, data sources, and identification strategies
+# 3. Generate tables and figures
+python -m code.generate_tables
 
-# 4. Start Claude Code
-claude
-
-# 5. Begin your research session
-/interview-me [your research topic]
+# 4. Compile paper
+latexmk -pdf -cd paper/main.tex
 ```
 
-That's it. The orchestrator will guide you through the rest.
+### Configuration
+
+All settings live in `.env` (gitignored):
+
+```bash
+TEST_MODE=true                   # true: subsample data for fast iteration
+TEST_MAX_STOCKS_PER_MONTH=200    # stocks per month in test mode
+TEST_MAX_ROLLING_WINDOWS=10      # OOS windows in test mode (last N years)
+USE_GPU=true                     # GPU acceleration for kernel computation
+```
 
 ---
 
-## Folder Structure
+## Method Overview
+
+### Theory-KRR Objective
+
+The estimator minimizes a penalized loss in the Nystrom-approximated RKHS:
 
 ```
-cloco/
-├── CLAUDE.md                       # Project instructions for Claude
-├── README.md                       # This file
-├── SESSION_REPORT.md               # Consolidated append-only operations log
-├── .gitignore
-├── .claude/
-│   ├── agents/                     # 16 agent definitions
-│   ├── skills/                     # 31 skill definitions
-│   ├── rules/                      # 22 governance rules
-│   ├── hooks/                      # Workflow enforcement hooks
-│   ├── lessons/
-│   │   └── LESSONS.md              # Project-specific corrections (append-only)
-│   └── agent-memory/               # Per-agent persistent memory
+L(β) = ||y - Zβ||² + nλ||β||² + Σⱼ μⱼ Cⱼ(Zβ)
+```
+
+where `Z` is the Nystrom feature matrix (n × m), `λ` is the statistical regularization, and each `Cⱼ` is a structural penalty derived from economic theory with group multiplier `μⱼ`.
+
+### 56 Restrictions across 8 Theory Families
+
+| Family | # | Examples |
+|--------|---|---------|
+| Consumption | 13 | Euler equations (CAPM, habit, LRR, Epstein-Zin), consumption-beta pricing |
+| Production | 10 | Investment/profitability monotonicity, q-theory, asset growth |
+| Intermediary | 8 | HKM capital ratio, intermediary Euler, sentiment, leverage cycle |
+| Information | 6 | Forecast dispersion, ambiguity aversion, rational inattention |
+| Demand | 6 | Market clearing, demand elasticity, inelastic markets, asset embeddings |
+| Volatility | 2 | VIX premium, realized volatility |
+| Behavioral | 6 | Momentum, reversal, disposition effect, overreaction |
+| Macro | 5 | Term spread, default spread, risk-free rate, macro factor R² |
+
+### Estimation Pipeline
+
+1. **GKX-style 3-way split**: Train | Validation (12yr) | Test (1yr), annual rebalancing, OOS from 1987
+2. **Managed portfolios**: Quintile-sorted portfolios on 7 characteristics (+ market EW) — ~36 per month
+3. **Nystrom approximation** (m=500): Reduces n×n kernel to n×m features — O(nm²) instead of O(n³)
+4. **λ cross-validation**: Search λ ∈ {1e-6, ..., 1e-2} via plain KRR validation MSE
+5. **μ coordinate descent**: For each of 8 groups, search μ via L-BFGS eval on validation set
+6. **Final fit**: L-BFGS on train+val with selected (λ, μ), predict on test year
+7. **Horse race**: Compare against historical mean, OLS, Ridge, Lasso, Elastic Net, plain KRR
+
+---
+
+## Repository Structure
+
+```
+theories-as-regularizers/
 ├── paper/
-│   ├── main.tex                    # Single source of truth
-│   ├── references.bib
-│   ├── sections/
-│   ├── figures/
-│   ├── tables/
-│   └── appendix/
-├── code/                           # Analysis scripts (R, Python, Stata)
+│   ├── main.tex                    # Paper (single source of truth)
+│   ├── sections/                   # Introduction, framework, empirical, estimation, results
+│   ├── tables/                     # Auto-generated LaTeX tables
+│   ├── figures/                    # Generated figures
+│   ├── appendix/                   # Proofs, computational details
+│   └── references.bib
+│
+├── code/
+│   ├── run_estimation_julia.jl     # Main estimation: GKX protocol, all models, OOS evaluation
+│   ├── restrictions_julia.jl       # 56 structural penalties with analytical gradients
+│   ├── generate_tables.py          # LaTeX table generation from estimation output
+│   ├── data_pipeline/
+│   │   ├── download_public_data.py # Downloads FF factors, NIPA, FRED, HKM, VIX, etc.
+│   │   └── build_panel.py          # Merges CRSP/Compustat/JKP into monthly panel
+│   ├── tables/                     # Per-table generators (summary stats, OOS, theory ranking)
+│   ├── figures/                    # Figure generators (theory importance over time)
+│   └── utils/
+│       └── data_loader.py          # Panel loader with TEST_MODE subsampling
+│
 ├── data/
-│   ├── raw/
+│   ├── raw/                        # Downloaded public datasets
 │   └── processed/
-├── talks/                          # Beamer / Quarto presentations
-├── output/                         # Intermediate results and logs
-├── replication/                    # Replication package
-├── quality_reports/
-│   ├── session_logs/               # Per-session logs
-│   ├── plans/                      # Approved implementation plans
-│   ├── specs/                      # Requirements specifications
-│   └── research_journal.md         # Agent-level research history
-├── templates/                      # Session log, quality report templates
-└── master_supporting_docs/         # Reference papers and data documentation
+│       └── panel_monthly.parquet   # Analysis-ready panel (~1.8M rows × 277 cols)
+│
+├── output/                         # Estimation outputs
+│   ├── cv_results.csv              # Aggregate OOS metrics (R²_OOS, SR, DM) per model
+│   └── cv_window_results.json      # Per-window results (μ values, MSEs, configs)
+│
+├── .env                            # Configuration (TEST_MODE, GPU, API keys)
+├── CLAUDE.md                       # Claude Code project instructions
+└── quality_reports/                # Session logs, audit reports
 ```
 
 ---
 
-## Customization
+## Data
 
-### 1. Fill in your domain profile
+### Panel Construction
 
-Edit `.claude/rules/domain-profile.md`:
-- **Field** — your primary field and adjacent subfields
-- **Target journals** — ranked by tier
-- **Common data sources** — with access and quirk notes
-- **Identification strategies** — the ones your field uses
-- **Field conventions** — notation, clustering, welfare analysis expectations
+The monthly panel merges:
+- **CRSP** monthly stock file (returns, prices, shares outstanding)
+- **Compustat** annual/quarterly (fundamentals: assets, investment, profitability)
+- **JKP firm characteristics** (pre-computed characteristics from Jensen-Kelly-Pedersen)
+- **Kenneth French** factors and risk-free rate
+- **NIPA** consumption (nondurable + services, monthly)
+- **FRED** macro variables (term spread, default spread, T-bill, TED, breakeven inflation)
+- **He-Kelly-Manela** intermediary capital ratio and risk factor
+- **Baker-Wurgler** investor sentiment
+- **Lettau-Ludvigson** cay (consumption-wealth ratio)
+- **CBOE** VIX and realized variance
 
-### 2. Adjust quality thresholds
+Final panel: ~1.8M stock-months, 228 ranked characteristics, 37 macro variables.
 
-Edit `.claude/rules/quality-gates.md` to raise or lower gate thresholds for your standards. The defaults (80/90/95) are conservative.
+### WRDS Access Required
 
-### 3. Set your project type
+CRSP, Compustat, and JKP characteristics require [WRDS](https://wrds-www.wharton.upenn.edu/) access. All other data sources are public and downloaded automatically.
 
-When you run `/interview-me`, Claude will ask for your project type. This sets the scoring weight column used throughout the pipeline. You can also set it manually in the research spec.
+---
 
-### 4. Local settings
+## Key Design Decisions
 
-Machine-specific settings (LaTeX paths, personal tool preferences) go in `.claude/settings.local.json` (gitignored) or `.claude/state/personal-memory.md` (gitignored). These stay local — the repo only commits generic patterns.
+- **Monthly aggregation for time-series penalties**: Macro variables are constant within each month across managed portfolios. Penalties aggregate predicted returns to monthly means before computing correlations/Euler errors, avoiding ~35x gradient dilution.
+- **L-BFGS evaluation** (not Newton approximation): Each candidate μ is evaluated by running 15 L-BFGS iterations warm-started from the KRR solution — true objective, no stale gradients.
+- **Nystrom always on**: Even in test mode, the m×m approximation is faster than the full n×n kernel.
+- **Julia for estimation**: JIT compilation + native threads + CUDA.jl for GPU kernel computation.
+
+---
+
+## Lineage
+
+The research workflow infrastructure is built on [**clo-author**](https://hsantanna88.github.io/clo-author/) by Hugo Sant'Anna, itself a fork of [**claude-code-my-workflow**](https://github.com/pedrohcgs/claude-code-my-workflow) by Pedro H.C. Sant'Anna (Emory University). Extended for financial economics research with project-type-aware pipelines, theory/structural agents, and field-specific scoring.
 
 ---
 
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
-
-The upstream projects ([clo-author](https://hsantanna88.github.io/clo-author/) and [claude-code-my-workflow](https://github.com/pedrohcgs/claude-code-my-workflow)) are also MIT licensed.
