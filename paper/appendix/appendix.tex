@@ -182,6 +182,7 @@ we have $\Pr(\hat{\mu}_j \geq \delta) \to 0$ for every $\delta > 0$.
 
 %----------------------------------------------------------------------
 \subsection{Proof of Proposition~\ref{prop:test_mu} (Testing the Marginal Value of Economic Models)}
+\label{app:proof_test_mu}
 %----------------------------------------------------------------------
 
 \begin{proof}
@@ -210,3 +211,121 @@ $\mathrm{CV}(\hat{\boldsymbol{\lambda}}_{-j}) -
 with probability approaching one.
 Hence $T_j = n(c/2 + o_p(1)) \to \infty$.
 \end{proof}
+
+
+%======================================================================
+\section{Computational Implementation}
+\label{app:computation}
+%======================================================================
+
+This appendix provides implementation details for reproducing the estimation results.
+All computations are performed on a workstation with a 40-core CPU, 274~GB of RAM, and an NVIDIA RTX A6000 GPU with 48~GB of VRAM.
+
+%----------------------------------------------------------------------
+\subsection{Nystr\"{o}m Approximation}
+\label{app:nystrom}
+%----------------------------------------------------------------------
+
+The full kernel matrix $\mathbf{K} \in \mathbb{R}^{n \times n}$ requires $O(n^2)$ storage and $O(n^3)$ time for the Cholesky factorization.
+For the managed-portfolio specification ($n \approx 4{,}000$), the full kernel is feasible.
+For the individual-stock panel ($n > 100{,}000$), the full kernel matrix exceeds 80~GB and is infeasible even on large-memory workstations.
+
+We address this via the Nystr\"{o}m low-rank approximation.
+Select $m \ll n$ landmark points uniformly at random from the training data and compute:
+\begin{align}
+\mathbf{K}_{nm} &\in \mathbb{R}^{n \times m}, \qquad [\mathbf{K}_{nm}]_{ij} = k(\mathbf{X}_i, \mathbf{X}_{l_j}), \label{eq:nystrom_knm} \\
+\mathbf{K}_{mm} &\in \mathbb{R}^{m \times m}, \qquad [\mathbf{K}_{mm}]_{ij} = k(\mathbf{X}_{l_i}, \mathbf{X}_{l_j}), \label{eq:nystrom_kmm}
+\end{align}
+where $\{l_1, \ldots, l_m\}$ are the landmark indices.
+The Nystr\"{o}m feature map is $\mathbf{Z} = \mathbf{K}_{nm}\,\mathbf{K}_{mm}^{-1/2} \in \mathbb{R}^{n \times m}$, where $\mathbf{K}_{mm}^{-1/2}$ is obtained via eigendecomposition.
+The kernel matrix is then approximated as $\mathbf{K} \approx \mathbf{Z}\,\mathbf{Z}^\top$.
+
+Under this approximation, the KRR solution becomes
+\begin{equation}
+\label{eq:nystrom_solve}
+\hat{\boldsymbol{\beta}} = (\mathbf{Z}^\top\mathbf{Z} + n\lambda_{\mathrm{stat}}\,\mathbf{I}_m)^{-1}\,\mathbf{Z}^\top\mathbf{y},
+\end{equation}
+which requires only an $m \times m$ Cholesky factorization at cost $O(m^3)$, plus $O(nm)$ for the matrix-vector products.
+Predictions on new data $\mathbf{X}_{\mathrm{new}}$ are computed as $\hat{\mathbf{f}} = \mathbf{Z}_{\mathrm{new}}\,\hat{\boldsymbol{\beta}}$, where $\mathbf{Z}_{\mathrm{new}} = \mathbf{K}_{\mathrm{new},m}\,\mathbf{K}_{mm}^{-1/2}$.
+
+For Theory-KRR with structural penalties, the L-BFGS optimization operates on the $m$-dimensional coefficient vector $\boldsymbol{\beta}$ rather than the $n$-dimensional $\boldsymbol{\alpha}$.
+Each L-BFGS iteration computes the fitted values $\hat{\mathbf{f}} = \mathbf{Z}\boldsymbol{\beta}$ at cost $O(nm)$, evaluates the structural penalties $C_j(\hat{\mathbf{f}})$, and updates $\boldsymbol{\beta}$.
+The gradient with respect to $\boldsymbol{\beta}$ has a simple form:
+\begin{equation}
+\label{eq:nystrom_gradient}
+\frac{\partial L}{\partial \boldsymbol{\beta}} = -2\,\mathbf{Z}^\top(\mathbf{y} - \mathbf{Z}\boldsymbol{\beta}) + 2n\lambda_{\mathrm{stat}}\,\boldsymbol{\beta} + \sum_{j} \mu_j\,\mathbf{Z}^\top\frac{\partial C_j}{\partial \hat{\mathbf{f}}},
+\end{equation}
+where $\partial C_j / \partial \hat{\mathbf{f}}$ is the $n$-dimensional gradient of the $j$-th penalty with respect to the fitted values.
+
+We use $m = 500$ landmarks throughout.
+Table~\ref{tab:nystrom_scaling} summarizes the computational scaling.
+
+\begin{table}[h]
+\centering
+\caption{Computational Scaling: Full Kernel vs.\ Nystr\"{o}m Approximation}
+\label{tab:nystrom_scaling}
+\small
+\begin{tabular}{lcc}
+\toprule
+ & Full Kernel & Nystr\"{o}m ($m = 500$) \\
+\midrule
+Kernel storage                & $O(n^2)$  & $O(nm)$ \\
+KRR solve                     & $O(n^3)$  & $O(nm^2 + m^3)$ \\
+L-BFGS per iteration          & $O(n^2)$  & $O(nm)$ \\
+\midrule
+$n = 4{,}000$ (portfolios)    & 128~MB, $<1$s & 16~MB, $<0.1$s \\
+$n = 90{,}000$ (stocks)       & 65~GB, $\sim 10$h & 360~MB, $\sim 3$min \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%----------------------------------------------------------------------
+\subsection{Coordinate Descent for Group Multipliers}
+\label{app:coord_descent}
+%----------------------------------------------------------------------
+
+The hyperparameter vector $(\lambda_{\mathrm{stat}}, \mu_1^{\mathrm{group}}, \ldots, \mu_G^{\mathrm{group}})$ is $G + 1 = 9$ dimensional.
+Exhaustive grid search with $k$ values per dimension requires $k^9$ evaluations; even with $k = 5$, this exceeds $10^6$ configurations, each requiring one full Theory-KRR fit.
+
+We adopt cyclic coordinate descent over the group multipliers, following the algorithmic template of \citet{friedman2010regularization}.
+The statistical penalty $\lambda_{\mathrm{stat}}$ is fixed by standard KRR cross-validation (a one-dimensional problem).
+The remaining 8 group multipliers are optimized sequentially: for each group $g$, we evaluate 16 candidate values
+\begin{equation}
+\label{eq:cd_candidates}
+\mu_g^{\mathrm{group}} \in \{0\} \cup \{10^{u} : u \in \mathrm{linspace}(-4, 1, 15)\},
+\end{equation}
+holding all other multipliers fixed, and retain the value that minimizes validation-set MSE.
+Including zero in the candidate set allows the algorithm to shut off entire theory families when they do not improve prediction.
+
+Each evaluation requires one Nystr\"{o}m KRR solve ($m \times m$ Cholesky, $m = 500$) plus a single Newton-like correction that incorporates the structural penalty gradient (see Section~\ref{app:nystrom}).
+The 16 candidates within each group are evaluated in parallel across CPU cores, so the wall-clock cost per group equals a single evaluation.
+One full cycle through $G = 8$ groups therefore costs $8 \times 1$ evaluations in wall-clock time; we run up to 3 cycles and stop early if no multiplier changes.
+
+The total budget is at most $3 \times 8 \times 16 = 384$ evaluations, completing in under 5 seconds per rolling window on our 40-core workstation with Nystr\"{o}m features.
+Coordinate descent has three advantages over random or grid search: (i)~it exploits the separable structure of the grouped penalty, (ii)~it automatically resolves substitution effects between correlated theory families, and (iii)~it scales linearly in the number of groups rather than exponentially.
+
+%----------------------------------------------------------------------
+\subsection{Parallelization Strategy}
+\label{app:parallel}
+%----------------------------------------------------------------------
+
+We exploit three levels of parallelism:
+
+\begin{enumerate}
+\item \textbf{GPU acceleration.}
+The kernel matrix computation~\eqref{eq:nystrom_knm}--\eqref{eq:nystrom_kmm} involves pairwise distance calculations and element-wise exponentials, which are trivially parallelizable on the GPU.
+The pairwise distance computation for $n = 90{,}000$ points against $m = 500$ landmarks completes in under 2 seconds on the RTX A6000, compared to approximately 30 seconds on a single CPU core.
+The subsequent $m \times m$ Cholesky factorization is performed on the CPU, as the $m = 500$ system is small enough that GPU transfer overhead dominates.
+
+\item \textbf{Multi-threaded coordinate descent.}
+Within each coordinate descent cycle, the 16 candidate values for a given group multiplier $\mu_g^{\mathrm{group}}$ are independent and evaluated in parallel across CPU threads.
+With 40 threads, all 16 candidates complete in the wall-clock time of a single Nystr\"{o}m solve.
+The sequential component---cycling through the $G = 8$ groups---is inherently serial, but each group's line search is fully parallel, yielding an effective speedup of $\min(16, 40) = 16\times$ relative to sequential evaluation.
+
+\item \textbf{Parallel ablation studies.}
+For predefined $\mu$ configurations (e.g., single-group activations used in the grid search baseline), each configuration is independent.
+We distribute all configurations across $\min(C, 40)$ CPU threads, achieving near-linear speedup since they share no mutable state.
+\end{enumerate}
+
+The memory footprint scales linearly in the number of parallel workers, since each worker maintains its own copy of the Nystr\"{o}m feature matrix $\mathbf{Z}$.
+With $m = 500$ and $n = 90{,}000$, each copy occupies approximately 360~MB, so 40 parallel workers require 14~GB---well within the 274~GB available on our workstation.

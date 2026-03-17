@@ -71,9 +71,17 @@ def load_crsp_monthly(raw_dir: Path, start: int, end: int) -> pd.DataFrame:
     hi = df["RET"].quantile(0.999)
     df["RET"] = df["RET"].clip(lo, hi)
 
+    # Past average return (trailing 36-month mean) for extrapolative expectations
+    df = df.sort_values(["permno", "yyyymm"])
+    df["past_avg_ret"] = (
+        df.groupby("permno")["RET"]
+        .transform(lambda x: x.rolling(36, min_periods=12).mean())
+    )
+
     keep_cols = [
         "permno", "yyyymm", "date", "RET", "RETX", "PRC", "SHROUT",
         "SHRCD", "EXCHCD", "me", "price_char", "size_char", "streversal",
+        "past_avg_ret",
     ]
     df = df[keep_cols].copy()
 
@@ -140,6 +148,9 @@ def load_compustat_annual(raw_dir: Path) -> pd.DataFrame:
     df["gp"] = (df["revt"] - df["cogs"]) / at           # gross profitability
     df["ag"] = df.groupby("gvkey")["at"].pct_change(fill_method=None)  # asset growth
     df["rd_intensity"] = df["xrd"].fillna(0) / sale      # R&D intensity
+    total_debt = (df["dlc"].fillna(0) + df["dltt"].fillna(0)).replace(0, np.nan)
+    df["k_debt"] = ppent / total_debt                      # collateral: PPE / total debt
+    df["sga_at"] = df["xsga"].fillna(np.nan) / at          # SGA intensity
 
     # Available date: datadate + 6 months (GKX convention for lookahead avoidance)
     df["yyyymm_available"] = (
@@ -151,6 +162,7 @@ def load_compustat_annual(raw_dir: Path) -> pd.DataFrame:
     keep_cols = [
         "gvkey", "datadate", "sic", "yyyymm_available",
         "ik", "roe", "leverage", "bm", "roa", "gp", "ag", "rd_intensity",
+        "k_debt", "sga_at",
     ]
     df = df[keep_cols].dropna(subset=["yyyymm_available"]).copy()
     df = df.sort_values(["gvkey", "yyyymm_available"])
@@ -345,8 +357,10 @@ def load_macro(raw_dir: Path, start: int, end: int) -> pd.DataFrame:
 
     # --- NIPA Consumption ---
     nipa = pd.read_csv(raw_dir / "nipa_consumption.csv", parse_dates=["date"])
-    # Real per capita consumption = (PCEND + PCESV) / PCEPI / POPTHM
-    nipa["real_cons_pc"] = (nipa["PCEND"].fillna(0) + nipa["PCESV"].fillna(0)) / nipa["PCEPI"] / nipa["POPTHM"]
+    # Real per capita consumption = (PCEND + PCES) / PCEPI / POPTHM
+    # PCES = monthly services; fallback to PCESV (quarterly) for legacy files
+    svc_col = "PCES" if "PCES" in nipa.columns else "PCESV"
+    nipa["real_cons_pc"] = (nipa["PCEND"].fillna(0) + nipa[svc_col].fillna(0)) / nipa["PCEPI"] / nipa["POPTHM"]
     nipa["cons_growth"] = nipa["real_cons_pc"].pct_change()
     nipa["yyyymm"] = nipa["date"].dt.year * 100 + nipa["date"].dt.month
     nipa = nipa[["yyyymm", "cons_growth"]].copy()
@@ -385,6 +399,65 @@ def load_macro(raw_dir: Path, start: int, end: int) -> pd.DataFrame:
     ebp = ebp.rename(columns={"BAAFFM": "ebp"})
     ebp = ebp[["yyyymm", "ebp"]].copy()
 
+    # --- TED Spread (daily → month-end) ---
+    ted_path = raw_dir / "ted_spread.csv"
+    if ted_path.exists():
+        ted = pd.read_csv(ted_path, parse_dates=["date"])
+        ted["TEDRATE"] = pd.to_numeric(ted["TEDRATE"], errors="coerce")
+        ted["yyyymm"] = ted["date"].dt.year * 100 + ted["date"].dt.month
+        ted = ted.sort_values("date").groupby("yyyymm")["TEDRATE"].last().reset_index()
+        ted = ted.rename(columns={"TEDRATE": "ted_spread"})
+    else:
+        log.warning("  ted_spread.csv not found — skipping TED spread")
+        ted = None
+
+    # --- Monetary Policy Surprise ---
+    mp_path = raw_dir / "mp_surprise.csv"
+    if mp_path.exists():
+        mp = pd.read_csv(mp_path, parse_dates=["date"])
+        mp["mp_surprise"] = pd.to_numeric(mp["mp_surprise"], errors="coerce")
+        mp["yyyymm"] = mp["date"].dt.year * 100 + mp["date"].dt.month
+        mp = mp[["yyyymm", "mp_surprise"]].copy()
+    else:
+        log.warning("  mp_surprise.csv not found — skipping")
+        mp = None
+
+    # --- HXZ Q Factors (Hou-Xue-Zhang) ---
+    qf_path = raw_dir / "q_factors.csv"
+    if qf_path.exists():
+        qf = pd.read_csv(qf_path)
+        qf["yyyymm"] = qf["year"] * 100 + qf["month"]
+        # Divide by 100 (reported in percent)
+        for col in ["r_mkt", "r_me", "r_ia", "r_roe", "r_eg"]:
+            if col in qf.columns:
+                qf[col] = qf[col] / 100.0
+        qf = qf[["yyyymm", "r_ia", "r_roe", "r_eg"]].copy()
+    else:
+        log.warning("  q_factors.csv not found — skipping HXZ factors")
+        qf = None
+
+    # --- Breakeven Inflation (10Y TIPS spread) ---
+    bei_path = raw_dir / "breakeven_inflation.csv"
+    if bei_path.exists():
+        bei = pd.read_csv(bei_path, parse_dates=["date"])
+        bei["breakeven_infl"] = pd.to_numeric(bei["breakeven_infl"], errors="coerce")
+        bei["yyyymm"] = bei["date"].dt.year * 100 + bei["date"].dt.month
+        bei = bei[["yyyymm", "breakeven_infl"]].copy()
+    else:
+        log.warning("  breakeven_inflation.csv not found — skipping")
+        bei = None
+
+    # --- BAB Factor (Frazzini-Pedersen) ---
+    bab_path = raw_dir / "bab_factor.csv"
+    if bab_path.exists():
+        bab = pd.read_csv(bab_path, parse_dates=["date"])
+        bab["bab"] = pd.to_numeric(bab["bab"], errors="coerce")
+        bab["yyyymm"] = bab["date"].dt.year * 100 + bab["date"].dt.month
+        bab = bab[["yyyymm", "bab"]].copy()
+    else:
+        log.warning("  bab_factor.csv not found — skipping BAB factor")
+        bab = None
+
     # --- Sentiment ---
     sent = pd.read_csv(raw_dir / "sentiment.csv")
     sent = sent.rename(columns={"date": "yyyymm"})
@@ -407,11 +480,48 @@ def load_macro(raw_dir: Path, start: int, end: int) -> pd.DataFrame:
     yyyymm_range = yyyymm_range[yyyymm_range["yyyymm"] % 100 >= 1]
 
     macro = yyyymm_range.copy()
-    for source in [ff, fred, vix, ebp, sent, wg]:
+    monthly_sources = [ff, fred, vix, ebp, sent, wg]
+    if ted is not None:
+        monthly_sources.append(ted)
+    if bei is not None:
+        monthly_sources.append(bei)
+    if bab is not None:
+        monthly_sources.append(bab)
+    if qf is not None:
+        monthly_sources.append(qf)
+    if mp is not None:
+        monthly_sources.append(mp)
+    for source in monthly_sources:
         macro = macro.merge(source, on="yyyymm", how="left")
 
-    # Forward-fill quarterly series (NIPA, HKM, CAY) into monthly
-    for qdf in [nipa, hkm, cay]:
+    # --- Equity Flows (quarterly, household equity transactions) ---
+    flow_path = raw_dir / "equity_flows.csv"
+    if flow_path.exists():
+        eflow = pd.read_csv(flow_path, parse_dates=["date"])
+        eflow["equity_flow"] = pd.to_numeric(eflow["equity_flow"], errors="coerce")
+        eflow["yyyymm"] = eflow["date"].dt.year * 100 + eflow["date"].dt.month
+        eflow = eflow[["yyyymm", "equity_flow"]].copy()
+    else:
+        log.warning("  equity_flows.csv not found — skipping")
+        eflow = None
+
+    # --- AEM Intermediary Leverage (quarterly) ---
+    aem_path = raw_dir / "aem_leverage.csv"
+    if aem_path.exists():
+        aem = pd.read_csv(aem_path, parse_dates=["date"])
+        aem["yyyymm"] = aem["date"].dt.year * 100 + aem["date"].dt.month
+        aem = aem[["yyyymm", "aem_leverage", "aem_leverage_change"]].copy()
+    else:
+        log.warning("  aem_leverage.csv not found — skipping AEM leverage")
+        aem = None
+
+    # Forward-fill quarterly series (NIPA, HKM, CAY, AEM) into monthly
+    quarterly_sources = [nipa, hkm, cay]
+    if aem is not None:
+        quarterly_sources.append(aem)
+    if eflow is not None:
+        quarterly_sources.append(eflow)
+    for qdf in quarterly_sources:
         macro = macro.merge(qdf, on="yyyymm", how="left")
         # Forward fill the columns just added
         new_cols = [c for c in qdf.columns if c != "yyyymm"]
@@ -541,13 +651,39 @@ def build_panel(
     rv = compute_realized_variance(raw_dir, permno_set, start, end)
     panel = panel.merge(rv, on=["permno", "yyyymm"], how="left")
 
+    # --- Derived characteristics (need full panel with macro) ---
+    log.info("Computing derived characteristics (salience, CGO)...")
+
+    # Salience (Bordalo et al 2012): |R_i - R_m| / cross-sectional std
+    if "mktrf" in panel.columns:
+        mkt_stats = panel.groupby("yyyymm").agg(
+            _mkt_ret=("mktrf", "first"),
+            _cross_std=("RET", "std"),
+        ).reset_index()
+        panel = panel.merge(mkt_stats, on="yyyymm", how="left")
+        panel["salience"] = (
+            (panel["RET"] - panel["_mkt_ret"]).abs()
+            / panel["_cross_std"].replace(0, np.nan)
+        )
+        panel = panel.drop(columns=["_mkt_ret", "_cross_std"])
+
+    # CGO (capital gains overhang, Grinblatt-Han 2005 / Frazzini 2006)
+    # Reference price = EWMA of past prices (halflife 12 months)
+    if "PRC" in panel.columns:
+        panel = panel.sort_values(["permno", "yyyymm"])
+        panel["_ref_price"] = panel.groupby("permno")["PRC"].transform(
+            lambda x: x.ewm(halflife=12, min_periods=6).mean()
+        )
+        panel["cgo"] = (panel["PRC"] - panel["_ref_price"]) / panel["PRC"].replace(0, np.nan)
+        panel = panel.drop(columns=["_ref_price"])
+
     # --- Filters ---
     # Identify characteristic columns (everything from chars except permno, yyyymm)
     id_cols = {"permno", "yyyymm", "date", "RET", "RETX", "PRC", "SHROUT",
                "SHRCD", "EXCHCD", "me", "price_char", "size_char", "streversal",
-               "gvkey", "sic"}
+               "past_avg_ret", "salience", "cgo", "gvkey", "sic"}
     # Annual compustat ratios
-    comp_a_cols = {"ik", "roe", "leverage", "bm", "roa", "gp", "ag", "rd_intensity"}
+    comp_a_cols = {"ik", "roe", "leverage", "bm", "roa", "gp", "ag", "rd_intensity", "k_debt", "sga_at"}
     # Quarterly compustat ratios
     comp_q_cols = {"roaq", "sue", "ceqq_growth"}
     # Macro and RV
@@ -561,7 +697,8 @@ def build_panel(
     # All rankable characteristics = chars file columns + CRSP-derived + Compustat ratios
     rank_cols = char_cols + list(comp_a_cols & set(panel.columns)) + list(comp_q_cols & set(panel.columns))
     # Add CRSP-derived
-    for c in ["price_char", "size_char", "streversal", "realized_var"]:
+    for c in ["price_char", "size_char", "streversal", "realized_var",
+              "past_avg_ret", "salience", "cgo"]:
         if c in panel.columns and c not in rank_cols:
             rank_cols.append(c)
 

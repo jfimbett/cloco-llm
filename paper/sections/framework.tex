@@ -494,6 +494,28 @@ alternating minimization), though convexity of the remaining terms
 provides a useful warm start.
 \end{remark}
 
+\begin{remark}[Uniqueness under nonconvex penalties]
+\label{rem:uniqueness_nonconvex}
+When some $C_j$ are nonconvex in the fitted values---as arises with
+nonlinear SDF specifications in Type~A penalties---the overall
+objective~\eqref{eq:finite_dim} may have multiple local minima.
+A sufficient condition for uniqueness is that the statistical
+regularization dominates the nonconvex curvature:
+if the spectral norm of the Hessian of
+$\sum_j \mu_j \tilde{C}_j(\hat{\mathbf{f}})$ at any critical point
+is bounded by $2\lambda_{\mathrm{stat}}\,\lambda_{\min}(\mathbf{K})/n$,
+where $\lambda_{\min}(\mathbf{K})$ is the smallest eigenvalue of
+$\mathbf{K}$, then the overall Hessian remains positive definite and
+the solution is unique.
+This condition is verifiable in practice from the kernel matrix
+and the penalty structure.
+The representer theorem (Proposition~\ref{prop:representer})
+holds regardless of convexity---it requires only that $\lambda_{\mathrm{stat}} > 0$
+and that penalties depend on $f$ through evaluations---so the
+finite-dimensional reduction is valid even when the reduced problem
+has multiple critical points \citep{bodin2024random}.
+\end{remark}
+
 %======================================================================
 \subsection{Nesting Structure}
 \label{sub:nesting}
@@ -554,7 +576,6 @@ is $(J+1)$-dimensional.
 We introduce grouped penalties and temporal cross-validation
 to make the selection tractable.
 
-\paragraph{Grouped penalties.}
 We assign each model $j$ to one of $G$ groups based on its
 economic type.  Let $g: \{1, \ldots, J\} \to \{1, \ldots, G\}$
 denote the group assignment, and impose $\mu_j = \mu_{g(j)}$
@@ -563,7 +584,6 @@ the three penalty types (A, B, D) each potentially with multiple variants
 (e.g., consumption-based vs.\ intermediary-based SDFs within Type~A).
 This reduces the hyperparameter space from $(J+1)$ to $(G+1) = 9$ dimensions.
 
-\paragraph{Temporal cross-validation.}
 Financial panel data exhibit strong serial dependence, so we use
 leave-one-year-out (LOYO) cross-validation to select $\boldsymbol{\lambda}$.
 Partition the sample into $T_{\mathrm{yr}}$ calendar years
@@ -585,7 +605,6 @@ where $\hat{f}_{-\ell}(\cdot; \boldsymbol{\lambda})$ is the theory-informed
 KRR estimator trained on $\mathcal{S}_{-\ell}$ with hyperparameters
 $\boldsymbol{\lambda}$.
 
-\paragraph{Search strategy.}
 We minimize $\mathrm{CV}(\boldsymbol{\lambda})$ by random search over
 a 9-dimensional log-uniform grid:
 $\log_{10}\lambda_{\mathrm{stat}} \in [-6, 2]$ and
@@ -690,6 +709,29 @@ The latter avoids the combinatorial explosion of the BMA model space
 and allows partial incorporation of each theory's restrictions.
 \end{remark}
 
+\begin{remark}[Structural penalties and the saturation barrier]
+\label{rem:saturation}
+Standard KRR is minimax-optimal when the target function $f^*$ satisfies
+a source condition $f^* \in [\mathcal{H}]^s$ with $0 < s \leq 1$,
+but saturates for smoother targets: when $s > 1$, the convergence rate
+cannot improve beyond $n^{-2/(2+\beta)}$ regardless of how
+$\lambda_{\mathrm{stat}}$ is tuned, where $\beta$ governs the eigenvalue
+decay of the kernel integral operator \citep{li2023saturation,zhang2025optimal}.
+This saturation effect is intrinsic to all spectral regularization methods,
+which lack the feature-learning capability of adaptive estimators
+\citep{barzilai2024spectral}.
+The structural penalties $\sum_j \mu_j C_j(f)$ can partially mitigate
+saturation by reducing the effective function class from the full RKHS
+$\mathcal{H}$ to a smaller set consistent with economic theory.
+When the penalties correctly narrow the search space, the effective
+source condition improves and the saturation boundary shifts upward.
+In the geometrical framework of \citet{zhang2024geometrical},
+this corresponds to projecting the estimator onto a lower-dimensional
+subspace of $\mathcal{H}$ compatible with the active structural
+restrictions, reducing the effective estimation dimension and
+improving the bias-variance trade-off.
+\end{remark}
+
 %======================================================================
 \subsection{Inference on Model Value}
 \label{sub:inference}
@@ -767,6 +809,33 @@ randomly reassign the structural penalty $C_j$ to pseudo-models
 functional form) and compare $T_j$ to the permutation distribution.
 This yields valid $p$-values under exchangeability of the
 pseudo-model assignments.
+\end{remark}
+
+\begin{remark}[Asymptotic foundations for $\mu_j$ inference]
+\label{rem:fischer_steinwart}
+The recent results of \citet{fischer2024asymptotic} provide a rigorous
+asymptotic theory for linear functionals of KRR estimators.
+For any functional $\ell(f) = \langle f, g \rangle_{\mathcal{H}}$
+with $g \in \mathcal{H}$, they establish a central limit theorem:
+the standardized functional converges to $\mathcal{N}(0,1)$ under
+appropriate regularization.
+Point evaluations achieve variance $O(n^{-1}\lambda^{-d/m})$ and
+bias $O(\lambda^{1-d/(2m)})$, where $d$ is the input dimension and
+$m$ the kernel smoothness order.
+The optimal $\lambda \sim n^{-1}$ yields a parametric rate for
+sufficiently smooth functionals.
+Since the gradient of $C_j$ evaluated at $\hat{f}$ is a linear
+functional of $\hat{f}$, these results support a score-type test
+for $H_0: \mu_j = 0$: evaluate the derivative
+$\partial C_j(f)/\partial f$ at the unconstrained KRR solution
+$\hat{f}^{\mathrm{KRR}}$, and reject when this gradient is large
+relative to its asymptotic standard error.
+This provides an alternative to the permutation-based approach
+of Remark~\ref{rem:permutation}, grounded in distributional theory
+rather than resampling.
+For uniform inference across evaluation points,
+\citet{singh2024kernel} constructs valid confidence bands
+using a Gaussian multiplier bootstrap calibrated to the RKHS norm.
 \end{remark}
 
 \begin{remark}[Interpretation]

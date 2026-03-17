@@ -44,9 +44,21 @@ The cross-validated multipliers $\hat{\mu}_g$ provide the first empirical rankin
 We group the fifty-six individual multipliers $\hat{\mu}_j$ into eight families following the catalog in Section~\ref{sec:restrictions}: Consumption, Production, Intermediary, Learning, Demand, Volatility, Behavioral, and Macro.
 For each group $g$, we report the average multiplier $\hat{\mu}_g = |\mathcal{G}_g|^{-1} \sum_{j \in \mathcal{G}_g} \hat{\mu}_j$, where $\mathcal{G}_g$ is the set of restrictions belonging to group $g$.
 
-Table~\ref{tab:theory_ranking} reports the group-level multipliers.
+Table~\ref{tab:theory_ranking} reports the group-level multipliers for each test year.
+Figure~\ref{fig:theory_importance} visualizes the temporal evolution of theory family importance across the 37 annual test windows.
+Panel~(a) shows the normalized share of each family's multiplier in the total penalty, while panel~(b) displays the raw $\mu_g$ values on a logarithmic scale.
 
-The most striking feature of Table~\ref{tab:theory_ranking} is that \emph{no single theory family dominates across all periods}.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/theory_importance.pdf}
+\caption{Temporal evolution of theory family importance, 1987--2023.
+Panel~(a): stacked area chart of normalized $\mu_g$ shares; each color represents one of the eight theory families.
+Panel~(b): heatmap of raw $\mu_g$ values on a log scale; white cells indicate inactive families ($\mu_g = 0$).
+Grey shading marks NBER recession periods.}
+\label{fig:theory_importance}
+\end{figure}
+
+The most striking feature of Table~\ref{tab:theory_ranking} and Figure~\ref{fig:theory_importance} is that \emph{no single theory family dominates across all periods}.
 Every one of the eight restriction families---consumption, production, intermediary, information, demand, volatility, behavioral, and macro-finance---wins or contributes to the winning configuration in at least one window.
 The optimal theory family rotates with economic conditions: demand-system restrictions of \citet{koijenyogo2019} help most in 1986--1988; volatility restrictions dominate in 1992--1994; consumption-based and intermediary restrictions jointly lead during 1995--1997; production-based restrictions (investment, leverage, asset growth) are optimal in 1998--2000; and behavioral restrictions (momentum, long-term reversal, disposition effect) are most valuable during the 2001--2003 dot-com bust.
 
@@ -135,23 +147,19 @@ The crisis-period results follow the same logic: during crises, the signal-to-no
 
 We examine sensitivity along four dimensions.
 
-\paragraph{Kernel bandwidth.}
-Our baseline sets $\sigma$ equal to the median pairwise distance in the training data (median heuristic).
+Our baseline sets the kernel bandwidth $\sigma$ equal to the median pairwise distance in the training data (median heuristic).
 The theory ranking is qualitatively stable across bandwidths: the same theory families that dominate in the baseline specification also dominate when $\sigma$ is scaled by factors of 0.5, 1.0, 1.5, and 2.0 relative to the median distance.
 Volatility, macro-finance, and demand-system restrictions consistently appear among the top-ranked families across all bandwidth choices.
 
-\paragraph{Pre-estimated structural parameters.}
 Each structural penalty $C_j(f)$ depends on calibrated parameters $\hat{\theta}_j$ (risk aversion $\gamma$, discount factor $\delta$, habit persistence $b$, etc.).
 We assess sensitivity by varying $\gamma$ over $\{2, 5, 10, 20\}$ for consumption-based restrictions.
 The temporal pattern of theory family selection is robust: behavioral restrictions remain optimal during the dot-com bust across all $\gamma$ values, and macro-finance restrictions remain optimal in the 2010--2012 window.
 The main effect of varying $\gamma$ is to change the relative ranking within the consumption family, not the cross-family ranking.
 
-\paragraph{Managed portfolios versus individual stocks.}
 Our baseline uses characteristic-sorted managed portfolios (37 portfolios per month) as the estimation unit, following the plan of using tractable kernel matrices.
 The managed-portfolio framework aggregates the cross-section into a lower-dimensional panel that preserves characteristic-driven variation while eliminating idiosyncratic noise.
 The $R^2_{\text{OOS}}$ values at the portfolio level (27--37\%) are higher than individual stock $R^2_{\text{OOS}}$ values (typically 0.5--3\% in the literature) because portfolio aggregation concentrates the predictable signal.
 Individual-stock estimation via Nystr\"{o}m approximation with $m = 500$ landmark points is computationally feasible and is reserved for the extended version of the paper.
 
-\paragraph{Cross-validation strategy.}
 Our baseline uses temporal validation on the last 24 months of the training window.
 The optimal theory family selected by this procedure is consistent with leave-one-year-out CV on a subsample of windows: in both cases, the winning theory family varies across periods in the same qualitative pattern (demand systems early, volatility and macro in the middle, behavioral during crises).

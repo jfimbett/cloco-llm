@@ -24,7 +24,7 @@
 *.bcf
 *.run.xml
 *.xdv
-paper/**/*.pdf
+
 
 # Data files (too large for git)
 data/raw/

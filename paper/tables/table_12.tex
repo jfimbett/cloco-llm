@@ -1,0 +1,23 @@
+\begin{table}[H]
+\centering
+\caption{Theory-KRR Validation Improvement over KRR by Subperiod}
+\label{tab:subsample}
+\small
+\begin{tabular}{lccc}
+\toprule
+Subperiod & Windows & Avg.\ Val.\ MSE Gain (\%) & Best Theory Family \\
+\midrule
+Pre-2000 (1983--2000) & 1--14 & -20.090 & consumption=0.7743+demand=0.0129+macro=59.9484, consumption=1.0000+demand=0.0129+macro=100.0000, consumption=1.0000+demand=0.0774+macro=7.7426 \\
+Post-2000 (2001--2023) & 15--37 & 3.687 & consumption=0.4642+information=100.0000+demand=0.0215+macro=100.0000, consumption=0.4642+demand=0.0215+macro=100.0000, consumption=0.7743+information=100.0000+demand=0.0215+macro=59.9484 \\[4pt]
+Crisis windows & 15--23 & -1.765 & consumption=0.4642+demand=0.0215+macro=100.0000, consumption=1.0000+demand=0.0464+macro=100.0000, consumption=1.2915+demand=0.0464+volatility=100.0000+macro=100.0000 \\
+Non-crisis windows & 1--37 & -5.996 & consumption=0.4642+information=100.0000+demand=0.0215+macro=100.0000, consumption=0.7743+information=100.0000+demand=0.0215+macro=59.9484, consumption=0.7743+demand=0.0129+macro=59.9484 \\[4pt]
+Early training ($<$300mo) & 1 & 10.071 & consumption=1.0000+demand=0.0774+macro=7.7426 \\
+Late training ($>$400mo) & 11--37 & -1.992 & consumption=0.4642+information=100.0000+demand=0.0215+macro=100.0000, consumption=0.4642+demand=0.0215+macro=100.0000, consumption=0.7743+information=100.0000+demand=0.0215+macro=59.9484 \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} Val.\ MSE gain is the percentage reduction in validation MSE of the best Theory-KRR configuration relative to standard KRR. Crisis windows are those whose OOS period includes the dot-com bust (2001--2003) or the global financial crisis (2007--2009). Improvement is measured on the temporal validation set within each window before out-of-sample prediction.
+\end{minipage}
+\end{table}

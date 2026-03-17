@@ -1,0 +1,27 @@
+\begin{table}[H]
+\centering
+\caption{Out-of-Sample Prediction Performance (Managed Portfolios)}
+\label{tab:oos_performance}
+\small
+\begin{tabular}{lccc}
+\toprule
+Model & $R^2_{\text{OOS}}$ (\%) & SR (ann.) & DM vs.\ Hist.\ Mean \\
+\midrule
+\multicolumn{4}{l}{\textit{Linear benchmarks}} \\
+Historical mean                & $0.00$ & $13.30$ & --- \\
+OLS (all predictors)           & $35.02$ & $12.31$ & $26.06$ \\
+Ridge regression               & $34.30$ & $12.28$ & $26.48$ \\
+Lasso                          & $34.38$ & $12.34$ & $26.42$ \\
+Elastic net                    & $34.37$ & $12.33$ & $26.43$ \\
+\multicolumn{4}{l}{\textit{Nonlinear benchmark}} \\
+Kernel ridge regression        & $42.12$ & $13.22$ & $24.50$ \\[4pt]
+\multicolumn{4}{l}{\textit{Theory-informed models}} \\
+Theory-KRR (best config)       & $41.41$ & $12.98$ & $23.96$ \\[4pt]
+\bottomrule
+\end{tabular}
+\begin{minipage}{\textwidth}
+\vspace{4pt}
+\footnotesize
+\textit{Notes:} $R^2_{\text{OOS}}$ is defined as $1 - \sum_s (R_s - \hat{f}(\mathbf{X}_s))^2 / \sum_s (R_s - \bar{R})^2$, where $\bar{R}$ is the historical mean computed using only data available at the time of prediction. SR is the annualized Sharpe ratio of a long-short decile portfolio sorted on predicted returns. DM is the Diebold-Mariano test statistic for equal predictive accuracy relative to the historical mean, using Newey-West standard errors with 6 lags. The evaluation period is 1987--2023 following the rolling three-way split of \citet{gu2020empirical} with 12-year validation windows and annual rebalancing.
+\end{minipage}
+\end{table}

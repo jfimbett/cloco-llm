@@ -145,26 +145,60 @@ def download_french_factors(force: bool = False):
 # 2. FRED downloads (generic helper)
 # ---------------------------------------------------------------------------
 
+def _get_fred_api_key() -> str | None:
+    """Read FRED_API_KEY from environment or .env file."""
+    key = os.environ.get('FRED_API_KEY')
+    if key:
+        return key
+    env_path = PROJECT_ROOT / '.env'
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('FRED_API_KEY='):
+                    return line.split('=', 1)[1].strip()
+    return None
+
+
+def _download_fred_single(sid: str, api_key: str | None = None) -> pd.DataFrame:
+    """Download a single FRED series, using API key if available."""
+    if api_key:
+        url = (
+            f"https://api.stlouisfed.org/fred/series/observations"
+            f"?series_id={sid}&api_key={api_key}&file_type=json"
+        )
+        resp = requests.get(url, timeout=60)
+        resp.raise_for_status()
+        obs = resp.json()['observations']
+        df = pd.DataFrame(obs)[['date', 'value']]
+        df = df.rename(columns={'value': sid})
+        df[sid] = pd.to_numeric(df[sid], errors='coerce')
+    else:
+        url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
+        resp = requests.get(url, timeout=60)
+        resp.raise_for_status()
+        df = pd.read_csv(io.StringIO(resp.text))
+        date_col = [c for c in df.columns if "date" in c.lower()][0]
+        df.rename(columns={date_col: "date"}, inplace=True)
+        for col in df.columns:
+            if col != "date":
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
+
+
 def _download_fred_series(series_ids: list[str], outpath: Path, force: bool = False):
     """Download multiple FRED series and merge by date."""
     if not _should_download(outpath, force):
         return
 
+    api_key = _get_fred_api_key()
+    if api_key:
+        print(f"  Using FRED API key")
+
     frames = []
     for sid in series_ids:
         print(f"  Downloading FRED series: {sid}...")
-        url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
-        resp = requests.get(url, timeout=60)
-        resp.raise_for_status()
-        df = pd.read_csv(io.StringIO(resp.text))
-        # FRED CSVs have columns: DATE, <SERIES_ID>
-        # FRED uses 'observation_date' or 'DATE' as the date column
-        date_col = [c for c in df.columns if "date" in c.lower()][0]
-        df.rename(columns={date_col: "date"}, inplace=True)
-        # Handle the '.' missing value marker
-        for col in df.columns:
-            if col != "date":
-                df[col] = pd.to_numeric(df[col], errors="coerce")
+        df = _download_fred_single(sid, api_key)
         frames.append(df)
 
     # Merge all on date
@@ -178,9 +212,13 @@ def _download_fred_series(series_ids: list[str], outpath: Path, force: bool = Fa
 
 
 def download_nipa_consumption(force: bool = False):
-    """Download NIPA consumption components from FRED."""
+    """Download NIPA consumption components from FRED.
+
+    Uses PCES (monthly services) instead of PCESV (quarterly) so that
+    consumption growth can be computed at monthly frequency without gaps.
+    """
     outpath = RAW_DIR / "nipa_consumption.csv"
-    series = ["PCEND", "PCESV", "PCEPI", "POPTHM"]
+    series = ["PCEND", "PCES", "PCEPI", "POPTHM"]
     _download_fred_series(series, outpath, force)
 
 
@@ -203,6 +241,77 @@ def download_vix(force: bool = False):
     outpath = RAW_DIR / "vix.csv"
     series = ["VIXCLS"]
     _download_fred_series(series, outpath, force)
+
+
+def download_ted_spread(force: bool = False):
+    """Download TED spread (3m LIBOR - 3m T-bill) from FRED."""
+    outpath = RAW_DIR / "ted_spread.csv"
+    series = ["TEDRATE"]
+    _download_fred_series(series, outpath, force)
+
+
+def download_bab_factor(force: bool = False):
+    """Download BAB factor (Frazzini-Pedersen) from AQR data library."""
+    outpath = RAW_DIR / "bab_factor.csv"
+    if not _should_download(outpath, force):
+        return
+
+    print("  Downloading BAB factor from AQR...")
+    url = "https://images.aqr.com/-/media/AQR/Documents/Insights/Data-Sets/Betting-Against-Beta-Equity-Factors-Monthly.xlsx"
+    resp = requests.get(url, timeout=120, headers={"User-Agent": "Mozilla/5.0"})
+    resp.raise_for_status()
+
+    # Parse: header is row 18, extract USA column
+    df = pd.read_excel(io.BytesIO(resp.content), sheet_name="BAB Factors", header=18)
+    usa = df[["DATE", "USA"]].copy()
+    usa["DATE"] = pd.to_datetime(usa["DATE"])
+    usa["USA"] = pd.to_numeric(usa["USA"], errors="coerce")
+    usa = usa.rename(columns={"DATE": "date", "USA": "bab"})
+    usa.to_csv(outpath, index=False)
+    valid = usa["bab"].dropna()
+    print(f"  [OK] {outpath.name}: {len(valid)} months, mean={valid.mean():.4f}")
+
+
+def download_breakeven_inflation(force: bool = False):
+    """Download 10-year breakeven inflation rate from FRED (T10YIEM, monthly)."""
+    outpath = RAW_DIR / "breakeven_inflation.csv"
+    if not _should_download(outpath, force):
+        return
+
+    api_key = _get_fred_api_key()
+    print("  Downloading 10Y breakeven inflation from FRED...")
+    df = _download_fred_single("T10YIEM", api_key)
+    df = df.rename(columns={"T10YIEM": "breakeven_infl"})
+    df.to_csv(outpath, index=False)
+    valid = pd.to_numeric(df["breakeven_infl"], errors="coerce").dropna()
+    print(f"  [OK] {outpath.name}: {len(valid)} months, mean={valid.mean():.3f}%")
+
+
+def download_aem_leverage(force: bool = False):
+    """Download AEM intermediary leverage from FRED Flow of Funds.
+
+    Computes broker-dealer leverage = Total Assets / Equity Capital using
+    FRED series BOGZ1FL664090005Q and BOGZ1FL665080003Q (quarterly).
+    """
+    outpath = RAW_DIR / "aem_leverage.csv"
+    if not _should_download(outpath, force):
+        return
+
+    api_key = _get_fred_api_key()
+    print("  Downloading broker-dealer assets and equity from FRED...")
+    assets = _download_fred_single("BOGZ1FL664090005Q", api_key)
+    equity = _download_fred_single("BOGZ1FL665080003Q", api_key)
+
+    merged = assets.merge(equity, on="date")
+    merged["date"] = pd.to_datetime(merged["date"])
+    merged = merged.sort_values("date")
+    merged["aem_leverage"] = merged["BOGZ1FL664090005Q"] / merged["BOGZ1FL665080003Q"]
+    merged["aem_leverage_change"] = merged["aem_leverage"].pct_change(fill_method=None)
+
+    out = merged[["date", "aem_leverage", "aem_leverage_change"]].copy()
+    out.to_csv(outpath, index=False)
+    valid = out["aem_leverage"].dropna()
+    print(f"  [OK] {outpath.name}: {len(valid)} quarters, leverage mean={valid.mean():.1f}")
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +394,10 @@ DOWNLOADS = [
     ("GZ Excess Bond Premium (FRED)", download_ebp),
     ("Welch-Goyal Predictors", download_welch_goyal),
     ("VIX (FRED)", download_vix),
+    ("TED Spread (FRED)", download_ted_spread),
+    ("BAB Factor (AQR)", download_bab_factor),
+    ("AEM Intermediary Leverage (FRED)", download_aem_leverage),
+    ("Breakeven Inflation (FRED)", download_breakeven_inflation),
 ]
 
 

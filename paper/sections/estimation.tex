@@ -31,14 +31,6 @@ The median heuristic places the kernel bandwidth at a scale where roughly half o
 This data-driven rule avoids both extremes: a bandwidth that is too small relative to the data's spread produces a nearly diagonal kernel matrix (overfitting), while a bandwidth that is too large produces a nearly constant kernel matrix (underfitting, approaching the global mean).
 The median heuristic has strong theoretical support in the kernel methods literature and performs well in high-dimensional settings where manual tuning is infeasible.
 
-As a robustness check, we also consider the Mat\'{e}rn-5/2 kernel:
-\begin{equation}\label{eq:matern_kernel}
-k_{5/2}(\mathbf{x}, \mathbf{x}') = \left(1 + \frac{\sqrt{5}\,r}{\ell} + \frac{5\,r^2}{3\,\ell^2}\right) \exp\!\left(-\frac{\sqrt{5}\,r}{\ell}\right), \qquad r = \|\mathbf{x} - \mathbf{x}'\|,
-\end{equation}
-where $\ell > 0$ is the length-scale parameter.
-Functions in the Mat\'{e}rn-5/2 RKHS are twice but not three times differentiable, producing smoother fitted surfaces than the infinitely differentiable Gaussian kernel.
-If the true $f^*$ has limited smoothness, the Mat\'{e}rn kernel may provide a better bias-variance trade-off.
-
 Two limiting cases clarify the role of the kernel.
 A linear kernel $k(\mathbf{x}, \mathbf{x}') = \mathbf{x}^\top \mathbf{x}'$ restricts $\Hcal$ to linear functions $f(\mathbf{x}) = \bm{\beta}^\top \mathbf{x}$, and Theory-KRR reduces to a penalized linear regression with structural penalties on coefficients.
 This nesting (Proposition~\ref{prop:nesting}(iii)) allows us to isolate the contribution of nonlinearity from the contribution of theory-informed penalties.
@@ -82,7 +74,6 @@ We set $\delta = 0.99$ (monthly) in all consumption-based models and use $b = 0.
 This is the simplest approach: $C_j(f)$ is fully determined by the data and a known parameter vector, with no estimation of $\theta_j$.
 The risk is that published parameter values, calibrated to match aggregate moments in a specific sample, may not be appropriate for cross-sectional return prediction.
 
-\paragraph{Implementation.}
 Our baseline uses joint estimation (Approach~1), initialized from the pre-estimation values (Approach~2).
 Robustness analysis compares all three approaches.
 For the sensitivity analysis, we report results over a grid of values for the most influential parameters:
@@ -99,7 +90,6 @@ The full hyperparameter vector of Theory-KRR is $(\lambda_{\mathrm{stat}}, \mu_1
 A 57-dimensional grid search is computationally infeasible.
 We reduce dimensionality by exploiting the economic structure of the restrictions and adopt the three-way temporal split of \citet{gu2020empirical} (Section~1.1) for hyperparameter selection.
 
-\paragraph{Grouped penalties.}
 We group the 56 restrictions into $G = 8$ families corresponding to the eight economic model classes cataloged in Section~\ref{sec:restrictions}: consumption-based Euler equations, production-based restrictions, intermediary restrictions, information and learning restrictions, demand-system restrictions, variance and volatility restrictions, behavioral restrictions, and macro-finance restrictions.
 Within each family $g$, we impose a common multiplier:
 \begin{equation}\label{eq:grouped_penalties}
@@ -109,31 +99,42 @@ This reduces the search space from 61 dimensions to 9: one statistical penalty $
 The grouping is motivated by the observation that restrictions within the same economic family share a common source of identification and are likely to have correlated empirical content.
 The grouping is not restrictive in the dimension that matters: cross-validation can set any group's multiplier to zero, shutting down that entire family of restrictions.
 
-\paragraph{Three-way temporal split.}
-Following the sample-splitting convention of \citet{gu2020empirical}, we partition the time series into three non-overlapping periods:
+Following \citet{gu2020empirical}, we adopt a rolling three-way sample split.
+For each test year $\tau$ from 1987 to 2023, we define:
 \begin{enumerate}
-\item \textbf{Training sample} (1960--1986): estimate $f(\cdot)$ and all structural parameters $\hat{\theta}_j$ for each candidate hyperparameter configuration.
-\item \textbf{Validation sample} (1987--2000): select the hyperparameter vector $(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}})$ that minimizes average squared prediction error:
+\item \textbf{Training sample} (July 1963 through year $\tau - 13$): estimate $f(\cdot)$ and all structural parameters $\hat{\theta}_j$ for each candidate hyperparameter configuration.
+\item \textbf{Validation sample} (year $\tau - 12$ through year $\tau - 1$, 12 years): select the hyperparameter vector $(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}})$ that minimizes average squared prediction error:
 \begin{equation}\label{eq:cv_criterion}
 (\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}}) = \argmin_{\lambda_{\mathrm{stat}}, \bm{\mu}^{\mathrm{group}}} \frac{1}{n_{\mathrm{val}}}\sum_{(i,t) \in \mathcal{S}_{\mathrm{val}}} \left(R_{i,t+1} - \hat{f}_{\mathrm{train}}(\mathbf{X}_{i,t})\right)^2,
 \end{equation}
 where $\hat{f}_{\mathrm{train}}$ is estimated using training data only.
-\item \textbf{Testing sample} (2001--present): evaluate out-of-sample performance using the selected hyperparameters. This sample is never used for estimation or tuning.
+\item \textbf{Testing sample} (year $\tau$, 12 months): evaluate out-of-sample performance using the selected hyperparameters.
+This sample is never used for estimation or tuning.
 \end{enumerate}
-The 1987 validation cutoff follows the convention in \citet{gu2020empirical} and ensures a 27-year training window. The three-way split provides a clean separation: the training sample determines $f$ and $\hat{\theta}_j$, the validation sample tunes $(\lambda_{\mathrm{stat}}, \bm{\mu})$, and the testing sample evaluates OOS performance without contamination from hyperparameter selection.
+For the first test year $\tau = 1987$, the training sample spans 1963--1974 (12 years) and the validation sample spans 1975--1986 (12 years).
+As $\tau$ advances, both the training and validation windows expand and slide forward: by 2023, the training sample spans 1963--2010 and the validation sample spans 2011--2022.
+The 12-year validation window follows \citet{gu2020empirical} and provides sufficient temporal variation for reliable hyperparameter selection.
+After selecting $(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}})$ on the validation sample, we re-estimate $f$ on the combined training and validation data (all months through year $\tau - 1$) and predict returns for year $\tau$.
+This rolling protocol yields 37 annual out-of-sample predictions spanning 1987--2023, covering the 1987 crash, the dot-com bust, the global financial crisis, and the COVID-19 pandemic.
 
-\paragraph{Search strategy.}
-We search the 9-dimensional hyperparameter space using random search with 200 draws.
-Each hyperparameter is drawn independently from a log-uniform distribution on $[10^{-4}, 10^{2}]$:
-\begin{equation}\label{eq:random_search}
-\log_{10}(\lambda_{\mathrm{stat}}), \; \log_{10}(\mu_g^{\mathrm{group}}) \;\overset{\mathrm{iid}}{\sim}\; \mathrm{Uniform}(-4, 2), \qquad g = 1, \ldots, 8.
+We search the 9-dimensional hyperparameter space using coordinate descent over the group multipliers, an approach inspired by the cyclic coordinate descent algorithm that underlies the Lasso and elastic net solvers of \citet{friedman2010regularization}.
+The statistical penalty $\lambda_{\mathrm{stat}}$ is first selected by standard KRR cross-validation without structural penalties ($\mu_g = 0$ for all $g$).
+Holding $\lambda_{\mathrm{stat}}$ fixed, we then optimize the eight group multipliers by cycling through each group $g = 1, \ldots, G$ and performing a one-dimensional line search over a grid of candidate values:
+\begin{equation}\label{eq:cd_grid}
+\mu_g^{\mathrm{group}} \in \{0\} \cup \{10^{u} : u \in \mathrm{linspace}(-4, 1, 15)\}.
 \end{equation}
-Random search over log-uniform distributions is well suited to hyperparameter spaces where the optimal values may span several orders of magnitude, as is typical in regularization problems.
-With 200 random draws, the probability of sampling within the top 5\% of the hyperparameter space in each of the 9 dimensions exceeds 0.99.
+For each candidate value of $\mu_g^{\mathrm{group}}$, all other multipliers are held at their current values, and the validation-set MSE is evaluated.
+The value that yields the lowest MSE is retained, and the algorithm moves to the next group.
+One full pass through all $G = 8$ groups constitutes one cycle; we repeat for up to 3 cycles and stop early if no group multiplier changes in a complete cycle.
 
-Each draw requires solving one KRR problem by inverting an $n \times n$ linear system.
-For $n \approx 4{,}000$ (approximately 370 portfolios $\times$ 12 months), each solve takes roughly 30 seconds on a modern workstation.
-The full random search over 200 draws completes in approximately 100 minutes per rolling window.
+The total number of function evaluations is at most $3 \times 8 \times 16 = 384$, compared to $k^9$ for an exhaustive grid.
+Each evaluation requires solving one Nystr\"{o}m-approximated KRR system (an $m \times m$ Cholesky factorization with $m = 500$; see Appendix~\ref{app:nystrom}), followed by a single Newton-like correction step that incorporates the structural penalty gradient.
+Because the 16 candidate values within each group are independent, they are evaluated in parallel across CPU cores, so each group's line search completes in the wall-clock time of a single evaluation.
+On our 40-core workstation, the full coordinate descent completes in under 5 seconds per rolling window.
+
+This approach connects to the penalized GMM literature, where sequential moment selection achieves rates comparable to the oracle that knows which moments are valid \citep{Caner2009lasso,Cheng2015select}.
+Coordinate descent also has a natural economic interpretation: it asks, for each theory family in turn, ``what is the optimal strength of this family's penalty, given the penalties already imposed by other families?''
+The sequential nature of the algorithm means that substitution effects between families---for instance, consumption-based and intermediary restrictions that capture similar risk exposures---are resolved automatically: the family that provides the largest marginal improvement is retained at a high multiplier, while the redundant family's multiplier is driven toward zero.
 
 %======================================================================
 \subsection{Computational Details}\label{sub:computation}
@@ -142,7 +143,6 @@ The full random search over 200 draws completes in approximately 100 minutes per
 By Proposition~\ref{prop:representer}, the estimator $\hat{f}(\cdot) = \sum_{s=1}^n \hat{\alpha}_s\, k(\mathbf{X}_s, \cdot)$ is parameterized by the coefficient vector $\hat{\bm{\alpha}} \in \R^n$.
 The optimization problem~\eqref{eq:finite_dim} is therefore finite-dimensional: we optimize over $\bm{\alpha}$ rather than over functions in $\Hcal$.
 
-\paragraph{Quadratic penalties (Types A and B).}
 When all active penalties are quadratic in the fitted values $\hat{\mathbf{f}} = \mathbf{K}\bm{\alpha}$, the objective is a convex quadratic in $\bm{\alpha}$, and the solution is given by the linear system~\eqref{eq:alpha_star}.
 The dominant computational cost is the $O(n^3)$ matrix inversion (or, equivalently, the Cholesky decomposition of the $n \times n$ system matrix).
 We solve the system using Cholesky factorization, which is numerically stable and exploits the positive definiteness guaranteed by $\lambda_{\mathrm{stat}} > 0$.
@@ -150,14 +150,16 @@ We solve the system using Cholesky factorization, which is numerically stable an
 For problems involving Type~A (Euler equation) penalties, the system matrix in~\eqref{eq:foc} contains the term $\bm{\Omega}\,\mathbf{K}$, where $\bm{\Omega}$ includes the $\mathbf{A}_j^\top \mathbf{A}_j$ matrices.
 These are at most rank $T$ (since $\mathbf{A}_j$ has $T$ rows), and we exploit this low-rank structure by precomputing and caching the products $\mathbf{A}_j\,\mathbf{K}$ for each active Euler-equation restriction.
 
-\paragraph{Nonquadratic penalties (Type D).}
-When demand-system penalties with nonlinear demand functions are active, the objective is nonconvex.
-We minimize using L-BFGS-B with analytically computed gradients.
-The standard KRR solution (all $\mu_j = 0$) provides a warm start that places the optimizer in the basin of attraction of the theory-informed minimum.
-In practice, we use L-BFGS-B for all penalty types, as the analytical Hessians required by the augmented linear system approach are computationally expensive for the full restriction set.
-Convergence requires 50--200 L-BFGS iterations, each costing $O(n^2)$ for the gradient computation via analytically derived penalty gradients.
+When structural penalties are active, we approximate the theory-informed solution by a single Newton-like correction from the standard KRR warm start.
+Specifically, let $\hat{\boldsymbol{\beta}}_{\mathrm{KRR}}$ denote the Nystr\"{o}m KRR solution (all $\mu_j = 0$), and let $\mathbf{g} = \sum_j \mu_j \, \mathbf{Z}^\top \frac{\partial C_j}{\partial \hat{\mathbf{f}}} \big|_{\hat{\mathbf{f}} = \mathbf{Z}\hat{\boldsymbol{\beta}}_{\mathrm{KRR}}}$ be the projected structural penalty gradient evaluated at the KRR fit.
+The theory-informed coefficient vector is
+\begin{equation}\label{eq:newton_step}
+\hat{\boldsymbol{\beta}}_{\mathrm{theory}} = \hat{\boldsymbol{\beta}}_{\mathrm{KRR}} - \alpha \, (\mathbf{Z}^\top\mathbf{Z} + n\lambda_{\mathrm{stat}}\,\mathbf{I}_m)^{-1} \mathbf{g},
+\end{equation}
+where the step size $\alpha$ is selected from a discrete set $\{0, 0.01, 0.05, 0.1, 0.5, 1, 2\}$ by minimizing the validation-set MSE.
+This one-step correction is computationally cheap---it requires one $m \times m$ Cholesky factorization plus one matrix-vector product per active restriction---and avoids the overhead of iterative L-BFGS optimization.
+Since the structural penalties are small relative to the data-fit term (by construction, as the $\mu_j$ are tuned to improve validation MSE rather than to enforce exact compliance), the single Newton step provides a good approximation to the fully converged solution.
 
-\paragraph{Memory and scalability.}
 The kernel matrix $\mathbf{K}$ is $n \times n$ and must be stored in memory.
 For our primary specification with $n \approx 4{,}000$ (cross-section of managed portfolios over 12 months), $\mathbf{K}$ occupies approximately 128~MB in double precision, which is manageable on standard hardware.
 For the full individual-stock panel ($n > 100{,}000$), storing $\mathbf{K}$ requires over 80~GB, which exceeds typical workstation memory.
@@ -169,36 +171,26 @@ Random Fourier features offer an alternative: they approximate the Gaussian kern
 Both approximations introduce a controllable approximation error that decreases as $m$ or $D$ increases.
 We use $m = 500$ Nystr\"{o}m landmarks when the full kernel matrix is infeasible.
 
-\paragraph{Software.}
-The estimator is implemented in Python using NumPy and SciPy for linear algebra.
-Kernel matrices are constructed via \texttt{scipy.spatial.distance}, the Cholesky factorization uses \texttt{scipy.linalg.cho\_factor}, and L-BFGS-B optimization uses \texttt{scipy.optimize.minimize}.
-Baseline models (OLS, Ridge, Lasso, Elastic Net, Random Forest) use scikit-learn; the neural network baseline uses PyTorch.
-The full codebase, including cross-validation, rolling-window evaluation, and portfolio construction, is available in the replication package.
 
 %======================================================================
 \subsection{Rolling-Window Procedure}\label{sub:rolling}
 %======================================================================
 
-We evaluate Theory-KRR in a rolling out-of-sample framework that mirrors the timing conventions of the asset-pricing literature.
-
-\paragraph{Training window.}
-We use an expanding window with a minimum training length of 240 months (20 years).
-The first training window spans January 1960 to December 1979; the first OOS prediction is for January 1980.
-As the evaluation period advances, the training window grows to incorporate all available historical data up to the most recent month.
-An expanding window maximizes the training sample at each evaluation date and allows the estimator to learn from the full history of cross-sectional return patterns.
-
-\paragraph{Evaluation and rebalancing.}
-At each annual rebalancing date (December of year $s$), we train Theory-KRR on the full training sample ending in month $s \times 12$ and predict returns for the next 12 months.
-Annual rebalancing reduces computational cost (one full estimation per year rather than per month) and aligns with the holding-period assumptions of many characteristic-based strategies.
+The rolling three-way split described in Section~\ref{sub:cv_strategy} defines the out-of-sample evaluation framework.
+At each annual rebalancing date (December of year $\tau - 1$), the full procedure is:
+(i)~estimate $\hat{f}$ on the training sample using each candidate $(\lambda_{\mathrm{stat}}, \bm{\mu}^{\mathrm{group}})$,
+(ii)~select the hyperparameter vector that minimizes validation-sample MSE,
+(iii)~re-estimate $\hat{f}$ on the combined training and validation data (all months through December of year $\tau - 1$), and
+(iv)~predict returns for the 12 months of year $\tau$.
 Portfolio weights are set at the rebalancing date and held fixed for 12 months.
 
-\paragraph{Hyperparameter re-estimation.}
-The full hyperparameter vector $(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}})$ is re-estimated by LOYO cross-validation at each annual rebalancing date.
-This allows the optimal balance between statistical and theory-informed regularization to vary over time.
+The expanding training window grows from 12 years (for $\tau = 1987$) to 48 years (for $\tau = 2023$), allowing the estimator to learn from the full history of cross-sectional return patterns.
+Annual rebalancing reduces computational cost (one full estimation per year rather than per month) and aligns with the holding-period assumptions of many characteristic-based strategies.
+
+The hyperparameter vector $(\hat{\lambda}_{\mathrm{stat}}, \hat{\bm{\mu}}^{\mathrm{group}})$ is re-estimated at each rebalancing date, allowing the optimal balance between statistical and theory-informed regularization to vary over time.
 Tracking $\hat{\mu}_g^{\mathrm{group}}$ across rebalancing dates reveals temporal variation in the value of each theory family---for instance, whether consumption-based restrictions become more useful during recessions or whether intermediary restrictions gain importance after financial crises.
 We report the time series of estimated multipliers in Section~\ref{sec:results}.
 
-\paragraph{Look-ahead bias prevention.}
 All information used in estimation---returns, characteristics, macro state variables, and the structural parameters $\hat{\theta}_j$---is available as of the training window's end date.
 Characteristics are lagged by at least one month relative to the return being predicted.
 Macro variables use the vintage available at the prediction date, not subsequently revised values.

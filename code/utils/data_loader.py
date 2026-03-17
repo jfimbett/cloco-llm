@@ -22,6 +22,16 @@ _MACRO_COLS = [
     'vix', 'ebp', 'sentiment', 'd12', 'e12', 'bm_wg', 'tbl', 'ntis', 'infl',
     'svar', 'cons_growth', 'hkm_capital_ratio', 'hkm_risk_factor', 'cay',
     'realized_var',
+    'ted_spread',
+    'bab',
+    'aem_leverage',
+    'aem_leverage_change',
+    'breakeven_infl',
+    'r_ia',
+    'r_roe',
+    'r_eg',
+    'mp_surprise',
+    'equity_flow',
 ]
 
 _NON_CHAR_COLS = set(_ID_COLS + _RETURN_COLS + _PRICE_COLS + _MACRO_COLS)

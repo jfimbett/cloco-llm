@@ -11,15 +11,13 @@
 \subsection{Data}\label{sub:data}
 %======================================================================
 
-\paragraph{Returns.}
-We obtain monthly stock returns from the Center for Research in Security Prices (CRSP) monthly stock file.
+Our primary dataset consists of monthly stock returns from the Center for Research in Security Prices (CRSP) monthly stock file.
 The sample includes ordinary common shares (share codes 10 and 11) listed on NYSE, AMEX, and NASDAQ (exchange codes 1, 2, and 3).
 Excess returns are computed by subtracting the one-month Treasury bill rate from the Fama-French data library.
 The effective sample period begins in July~1963---when both CRSP and Compustat coverage become reliable---and ends in December~2023, spanning 726~months and approximately 18,000 unique securities.
 This start date matches \citet{gu2020empirical} and the bulk of the cross-sectional return prediction literature.
 
-\paragraph{Firm characteristics.}
-We use 220 firm-level predictive characteristics constructed from CRSP returns, Compustat fundamentals, and the Open Source Asset Pricing (OSAP) dataset of \citet{jensen2023machine}.
+We pair returns with 220 firm-level predictive characteristics constructed from CRSP returns, Compustat fundamentals, and the Open Source Asset Pricing (OSAP) dataset of \citet{jensen2023machine}.
 The OSAP dataset provides a standardized, publicly available panel of signed characteristics at the security-month level, constructed following the original papers' methodologies and validated against published results.
 Supplementary variables include CRSP-derived signals (price, size, short-term reversal) and Compustat-derived fundamentals (investment-to-capital, ROE, leverage, ROA, gross profitability, asset growth, R\&D intensity) that enter the structural restriction penalties directly.
 All characteristics are signed so that higher values predict higher expected returns.
@@ -35,7 +33,6 @@ These are merged with CRSP via the CRSP-Compustat linking table using primary li
 Key accounting variables include total assets, book equity, sales, income before extraordinary items, capital expenditures, property-plant-equipment, depreciation, long-term and short-term debt, cash holdings, R\&D expenditure, and selling-general-administrative expenses.
 Our Compustat sample includes both active and inactive firms to avoid survivorship bias.
 
-\paragraph{Macro state variables.}
 We augment firm-level characteristics with macroeconomic state variables that serve two roles: they enter the kernel as predictors of expected returns, and they supply inputs to the structural restriction penalties in Section~\ref{sec:restrictions}.
 These variables are drawn from four sources.
 
@@ -50,7 +47,24 @@ The CBOE Volatility Index (VIX) is obtained from FRED and is available from Janu
 The excess bond premium of \citet{gilchristzakrajsek2012} is proxied by the Moody's BAA spread over the 10-year Treasury (BAAFFM series from FRED).
 Additional macro predictors---the dividend-price ratio, earnings-price ratio, aggregate book-to-market, net equity expansion, Treasury bill rate, long-term yield, and stock variance---are obtained from the \citet{welchgoyal2008} dataset, which covers 1871--2024 at monthly frequency.
 
-\paragraph{Missing data and sample restrictions.}
+Several structural restrictions require variables beyond the standard characteristic and macro sets.
+For the production-based restrictions (14--23), we construct leverage (total debt over total assets), R\&D intensity (R\&D expenditure over sales), SGA intensity (selling, general, and administrative expenses over total assets), and the collateral ratio (PP\&E over total debt) from Compustat annual fundamentals.
+The hiring rate of \citet{belolinbazdresch2014} is obtained from the OSAP characteristic panel.
+The dividend yield used in the costly external finance restriction~(21) is the short-term dividend yield from the OSAP panel.
+
+For intermediary restrictions, we supplement the HKM factor with broker-dealer leverage from the Federal Reserve's Financial Accounts (Flow of Funds series BOGZ1FL664090005Q and BOGZ1FL665080003Q), following \citet{adrianetulamuir2014}.
+The TED spread (3-month LIBOR minus 3-month Treasury bill, FRED series TEDRATE) proxies funding liquidity in restriction~26; this series ends in January~2022 following the discontinuation of LIBOR.
+The betting-against-beta (BAB) factor of \citet{frazzinipedersen2014} is obtained from AQR's data library and covers 1930--2025 at monthly frequency.
+Household equity net flows (FRED series HNOCESQ027S, quarterly, forward-filled to monthly) proxy capital flows in restrictions~29 and~40.
+
+For behavioral restrictions, the capital gains overhang of restriction~48 is computed as $(P_t - \mathrm{RP}_t)/P_t$, where the reference price $\mathrm{RP}_t$ is an exponentially weighted moving average of past prices with a 12-month half-life.
+The salience measure of restriction~51 is $|R_{i,t} - R_{m,t}|/\sigma_{\mathrm{cross},t}$, the absolute deviation of the stock's return from the market return scaled by the cross-sectional standard deviation.
+The past average return of restriction~49 is the trailing 36-month rolling mean of monthly returns.
+
+For macro-finance restrictions, the 10-year breakeven inflation rate (FRED series T10YIEM, available from 2003) proxies the inflation risk premium in restriction~53.
+The monetary policy surprise of restriction~54 is the residual from an AR(1) model of monthly changes in the effective federal funds rate (FRED series FEDFUNDS).
+The $q$-factor expected growth factor ($R_{\mathrm{EG}}$) of \citet{houxuezhang2015} is obtained from the Macro Finance Society dataset on WRDS.
+
 We require a minimum of 15 non-missing characteristics per stock-month observation.
 Observations with fewer non-missing characteristics are dropped.
 Returns are winsorized at the 0.1st and 99.9th percentiles each month to limit the influence of extreme observations while preserving the bulk of the return distribution.
@@ -60,14 +74,17 @@ Not all macro state variables are available for the full sample period.
 The VIX is available only from 1990, so the two variance and volatility restrictions (44--45) are evaluated on the post-1990 subsample.
 The HKM intermediary factors are available quarterly from 1970 to 2012; restrictions~24--27 are evaluated on this subsample.
 The Baker-Wurgler sentiment index is available from 1965 to 2023.
+The TED spread is available from 1986 to 2022 (discontinued with LIBOR).
+The 10-year breakeven inflation rate is available from 2003.
+The HXZ expected growth factor covers 1967--2019.
 All other macro variables cover the full 1963--2023 sample period.
 
 %======================================================================
 \subsection{Baseline Models}\label{sub:baselines}
 %======================================================================
 
-We compare Theory-KRR against eight baseline models spanning the spectrum from simple linear methods to flexible nonparametric estimators.
-All baselines use the same data, the same rolling-window procedure described in Section~\ref{sub:rolling}, and the same LOYO temporal cross-validation for hyperparameter selection.
+We compare Theory-KRR against five baseline models spanning the spectrum from simple linear methods to a flexible nonparametric estimator.
+All baselines use the same data, the same rolling-window procedure described in Section~\ref{sub:cv_strategy}, and the same temporal cross-validation for hyperparameter selection.
 This ensures that performance differences reflect the models' functional form and regularization, not differences in data or evaluation protocol.
 
 \begin{enumerate}[label=\arabic*.]
@@ -77,44 +94,34 @@ This is the natural benchmark for $R^2_{\mathrm{OOS}}$, which measures improveme
 
 \item \textbf{OLS.}
 Linear regression of next-month excess returns on the full vector of characteristics: $\hat{f}(\mathbf{X}_{i,t}) = \hat{\bm{\beta}}^{\top}\mathbf{X}_{i,t}$.
-With 37 characteristics, OLS is prone to overfitting in small training samples but provides a benchmark for the value of nonlinearity.
+OLS is prone to overfitting in small training samples but provides a benchmark for the value of regularization and nonlinearity.
 
 \item \textbf{Ridge regression.}
 OLS with an $\ell_2$ penalty on the coefficient vector: the objective is $\frac{1}{n}\sum_s(R_s - \bm{\beta}^\top \mathbf{X}_s)^2 + \lambda\|\bm{\beta}\|_2^2$.
 Ridge regression shrinks coefficients toward zero without enforcing sparsity.
-The regularization parameter $\lambda$ is selected by LOYO CV.
+The regularization parameter $\lambda$ is selected on the validation sample over a grid of 20 log-spaced values.
 
 \item \textbf{Lasso.}
 OLS with an $\ell_1$ penalty: the objective is $\frac{1}{n}\sum_s(R_s - \bm{\beta}^\top \mathbf{X}_s)^2 + \lambda\|\bm{\beta}\|_1$.
 The $\ell_1$ penalty performs variable selection by setting some coefficients exactly to zero.
+The regularization path is computed by coordinate descent \citep{friedman2010regularization} and the optimal $\lambda$ is selected on the validation sample.
 
 \item \textbf{Elastic net.}
-A convex combination of $\ell_1$ and $\ell_2$ penalties: the objective is $\frac{1}{n}\sum_s(R_s - \bm{\beta}^\top \mathbf{X}_s)^2 + \lambda_1\|\bm{\beta}\|_1 + \lambda_2\|\bm{\beta}\|_2^2$.
-The elastic net combines variable selection (Lasso) with coefficient shrinkage (ridge).
-Both $\lambda_1$ and $\lambda_2$ are selected by LOYO CV.
+A convex combination of $\ell_1$ and $\ell_2$ penalties with mixing parameter $\alpha = 0.5$.
+The regularization path and $\lambda$ selection follow the same procedure as the Lasso.
 
 \item \textbf{Standard KRR.}
 The Gaussian kernel ridge regression estimator with RKHS-norm regularization only: this is Theory-KRR with all $\mu_j = 0$.
 Standard KRR captures nonlinearities and interactions through the Gaussian kernel but receives no guidance from economic theory.
 Comparing Theory-KRR to standard KRR isolates the marginal contribution of the structural penalties.
-
-\item \textbf{Neural network.}
-A feedforward neural network with three hidden layers, following the architecture of Gu, Kelly, and Xiu~(2020): layer widths of 32, 16, and 8 neurons, ReLU activation functions, batch normalization, and dropout ($p = 0.5$) for regularization.
-The network is trained by stochastic gradient descent with early stopping based on validation loss (the last 20\% of the training window serves as the validation set).
-
-\item \textbf{Random forest.}
-An ensemble of 300 regression trees with the number of candidate variables at each split set to $\lfloor p/3 \rfloor$, following Gu, Kelly, and Xiu~(2020).
-Tree depth is controlled by requiring a minimum of 5 observations per leaf node.
 \end{enumerate}
 
 %======================================================================
 \subsection{Evaluation Metrics}\label{sub:evaluation}
 %======================================================================
 
-We evaluate predictive performance along three dimensions: statistical accuracy, portfolio profitability, and economic value.
-
-\paragraph{Out-of-sample $R^2$.}
-Following Campbell and Thompson~(2008), we measure predictive accuracy by
+We evaluate predictive performance along two dimensions: statistical accuracy and economic significance.
+Following Campbell and Thompson~(2008), we measure predictive accuracy by the out-of-sample $R^2$:
 \begin{equation}\label{eq:r2oos}
 R^2_{\mathrm{OOS}} = 1 - \frac{\displaystyle\sum_{(i,t) \in \mathcal{T}_{\mathrm{OOS}}} \bigl(R_{i,t+1} - \hat{f}(\mathbf{X}_{i,t})\bigr)^2}{\displaystyle\sum_{(i,t) \in \mathcal{T}_{\mathrm{OOS}}} \bigl(R_{i,t+1} - \bar{R}\bigr)^2},
 \end{equation}
@@ -122,8 +129,7 @@ where $\mathcal{T}_{\mathrm{OOS}}$ indexes the out-of-sample observations and $\
 A positive $R^2_{\mathrm{OOS}}$ indicates that the model predicts better than the historical mean.
 In the cross-section of individual stock returns, $R^2_{\mathrm{OOS}}$ values above 1\% are economically meaningful given the high idiosyncratic variance of monthly returns.
 
-\paragraph{Portfolio Sharpe ratios.}
-We form decile portfolios each month by sorting stocks on their predicted expected returns $\hat{f}(\mathbf{X}_{i,t})$.
+To assess economic significance, we form decile portfolios each month by sorting stocks on their predicted expected returns $\hat{f}(\mathbf{X}_{i,t})$.
 The long-short portfolio goes long the top decile and short the bottom decile, with value-weighted holdings within each decile.
 We report annualized Sharpe ratios:
 \begin{equation}\label{eq:sharpe}
@@ -132,18 +138,7 @@ We report annualized Sharpe ratios:
 where $\hat{\mu}_{L-S}$ and $\hat{\sigma}_{L-S}$ are the sample mean and standard deviation of the monthly long-short return.
 Higher Sharpe ratios indicate that the model's predictions generate more profitable trading strategies per unit of risk.
 
-\paragraph{Certainty equivalent return.}
-For a mean-variance investor with relative risk aversion $\gamma = 5$, the certainty equivalent return of a portfolio with mean $\hat{\mu}_p$ and variance $\hat{\sigma}_p^2$ is
-\begin{equation}\label{eq:cer}
-\mathrm{CER} = \hat{\mu}_p - \frac{\gamma}{2}\,\hat{\sigma}_p^2.
-\end{equation}
-The CER provides an economically interpretable measure of the value of predictability: it is the riskless return that the investor would accept in lieu of the risky portfolio.
-We compute the CER for the long-short portfolio constructed from each model's predictions.
-
-\paragraph{Statistical inference.}
-We assess the statistical significance of performance differences using three procedures.
-The Diebold-Mariano test compares squared forecast errors between Theory-KRR and each baseline, with Newey-West standard errors (6 lags) to account for serial correlation.
-For Sharpe ratio differences, we use a block bootstrap with 12-month blocks and 10,000 replications; the block length preserves the annual dependence structure in monthly returns.
+We assess the statistical significance of performance differences using the Diebold-Mariano test, which compares squared forecast errors between Theory-KRR and each baseline with Newey-West standard errors (6 lags) to account for serial correlation.
 All reported standard errors use the Newey-West HAC estimator with 6 lags unless otherwise noted.
 
 %======================================================================
